@@ -1,0 +1,50 @@
+{
+    "packages": [
+        {
+            "name": "macroman/terminal-progress-bar",
+            "version": "0.1.8",
+            "version_normalized": "0.1.8.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/MacroMan/PHPTerminalProgressBar.git",
+                "reference": "7c6c64ebca812b8f836be9b7368e605d01e6eb9e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/MacroMan/PHPTerminalProgressBar/zipball/7c6c64ebca812b8f836be9b7368e605d01e6eb9e",
+                "reference": "7c6c64ebca812b8f836be9b7368e605d01e6eb9e",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.0|>=8.0"
+            },
+            "time": "2023-05-27T21:27:37+00:00",
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "psr-0": {
+                    "TerminalProgress": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-3.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "David Wakelin",
+                    "email": "hello@davidwakelin.co.uk"
+                }
+            ],
+            "description": "Flexible ascii progress bar.",
+            "homepage": "https://github.com/MacroMan/PHPTerminalProgressBar",
+            "support": {
+                "issues": "https://github.com/MacroMan/PHPTerminalProgressBar/issues",
+                "source": "https://github.com/MacroMan/PHPTerminalProgressBar/tree/0.1.8"
+            },
+            "install-path": "../macroman/terminal-progress-bar"
+        }
+    ],
+    "dev": true,
+    "dev-package-names": []
+}

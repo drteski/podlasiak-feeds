@@ -1,0 +1,9 @@
+{
+	"require": {
+		"ext-curl": "*",
+		"ext-simplexml": "*",
+		"ext-libxml": "*",
+		"ext-json": "*",
+		"macroman/terminal-progress-bar": "^0.1.8"
+	}
+}
