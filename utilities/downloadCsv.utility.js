@@ -1,6 +1,6 @@
 import DownloadFile from 'nodejs-file-downloader';
 
-const downloadHandler = async (url, directory, fileName) => {
+const FileDownloader = async (url, directory, fileName) => {
 	const downloader = new DownloadFile({
 		url,
 		directory,
@@ -17,4 +17,4 @@ const downloadHandler = async (url, directory, fileName) => {
 	}
 };
 
-export default downloadHandler;
+export default FileDownloader;

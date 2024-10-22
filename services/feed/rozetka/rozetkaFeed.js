@@ -6,6 +6,10 @@ import {
 	saveFeedFileToDisk,
 	xmlBuilider,
 } from '../../processFeed.js';
+import axios from 'axios';
+import csv from 'csvtojson';
+import fs from 'fs';
+import FileDownloader from '../../../utilities/downloadCsv.utility.js';
 
 const rozetkaFeed = async (
 	data,
@@ -16,6 +20,7 @@ const rozetkaFeed = async (
 		activeProducts = true,
 		activeVariants = true,
 		minStock,
+		options,
 	}
 ) => {
 	const calculatePrice = (price, weight, rate) => {
@@ -29,6 +34,16 @@ const rozetkaFeed = async (
 		}
 		return ((price * (mu / 100 + 1) + deliveryPrice) / rate).toFixed(2);
 	};
+
+	await FileDownloader(
+		'https://docs.google.com/spreadsheets/d/e/2PACX-1vQNPsD11N9qMUfmG70yyRiWEHE_cEa5_oybRhhaIz_XEHncrN-2GNHTZfrYl9_2v3QmzUWeK0xRTAij/pub?gid=0&single=true&output=csv',
+		'../public/rozetka/',
+		'descriptions.csv'
+	);
+
+	const manualDescriptions = await csv()
+		.fromFile('../public/rozetka/descriptions.csv')
+		.subscribe((data) => data);
 
 	const eurRate = await getCurrencyRates('EUR').then((data) => data);
 	const uahRate = await getCurrencyRates('UAH').then((data) => data);
@@ -61,12 +76,36 @@ const rozetkaFeed = async (
 			}
 			if (stock < minStock) return;
 
+			if (
+				!options.includeVariantIds.some(
+					(id) => id === parseInt(variantId)
+				)
+			)
+				return;
+
+			const filteredAttributes = (
+				attributes[language].length === undefined
+					? [attributes[language]]
+					: attributes[language]
+			)
+				.map((attribute) => {
+					if (attribute.value === '' || attribute.value === undefined)
+						return;
+					if (attribute.value === 'Wysyłamy w: 24h') return;
+					if (attribute.value === '*Wysyłamy w: 24h*') return;
+					return attribute;
+				})
+				.filter(Boolean);
+
 			const storeUrl = getStoreUrl(language, 'Rea');
 
 			const priceInEur = parseFloat(
 				calculatePrice(sellPrice[language].price, weight, eurRate)
 			);
-
+			const manualDescriptionIndex = manualDescriptions.findIndex(
+				(desc) => parseInt(desc.variantId) === parseInt(variantId)
+			);
+			if (manualDescriptionIndex === -1) return;
 			if (category[language].length === 0) return;
 			if (priceInEur > 150) return;
 			return {
@@ -75,24 +114,28 @@ const rozetkaFeed = async (
 				ean,
 				stock,
 				weight,
-				title: `${producer} ${title[language].replace(/rea/gim, '').replace('  ', ' ')} ${variantName[language]}`,
-				description: description[language],
+				// title: `${producer} ${manualDescriptions[manualDescriptionIndex].title_ua.replace('REA ', '').replace('Rea ', '')} ${variantName[language]}`,
+				title: manualDescriptions[manualDescriptionIndex].title_ua,
+				description:
+					manualDescriptions[manualDescriptionIndex].description_ua,
 				producer,
 				category:
 					category[language][0].length === undefined
 						? [category[language][0]]
 						: category[language][0],
-				images: images.map((img) => storeUrl + 'picture/' + img),
+				images: images
+					.map((img) => storeUrl + 'picture/' + img)
+					.filter(
+						(img, index, array) =>
+							index < 13 || index === array.length - 1
+					),
 				price: calculatePrice(
 					sellPrice[language].price,
 					weight,
 					uahRate
 				),
 				url: storeUrl + url[language]['Rea'],
-				attributes:
-					attributes[language].length === undefined
-						? [attributes[language]]
-						: attributes[language],
+				attributes: filteredAttributes,
 			};
 		})
 		.filter(Boolean);
@@ -177,10 +220,10 @@ const rozetkaXmlSchema = (data, root) => {
 		const offer = offers
 			.ele('offer', {
 				id: product.variantId,
-				available: product.stock > 10,
+				available: product.stock > 5,
 			})
 			.ele('url')
-			.txt(product.url[0])
+			.txt(product.url)
 			.up()
 			.ele('price')
 			.txt(product.price)

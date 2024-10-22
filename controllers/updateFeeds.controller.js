@@ -9,17 +9,22 @@ import { generateWszystkoFeed } from '../services/feed/wszystko/wszystkoFeed.js'
 import { generateMatrixifyFeed } from '../services/feed/matrixify/matrixifyFeed.js';
 import { generateMdfFeed } from '../services/feed/mdf/mdfFeed.js';
 import { generateAtomstoreFeed } from '../services/feed/atomstore/atomstoreFeed.js';
+import { generateToolightCatalogFeed } from '../services/feed/toolight-catalog/toolightCatalogFeed.js';
 //
 // dotenv.config({ path: '../.env' });
 //
 
 const feedGenerators = [
 	{ generator: generateRozetkaFeed, config: feedsConfig.rozetka },
-	{ generator: generatePepitaFeed, config: feedsConfig.pepita },
-	{ generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
-	{ generator: generateMdfFeed, config: feedsConfig.mdf },
-	{ generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
-	{ generator: generateWszystkoFeed, config: feedsConfig.wszystko },
+	// { generator: generatePepitaFeed, config: feedsConfig.pepita },
+	// { generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
+	// { generator: generateMdfFeed, config: feedsConfig.mdf },
+	// { generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
+	// {
+	// 	generator: generateToolightCatalogFeed,
+	// 	config: feedsConfig.toolightCatalog,
+	// },
+	// { generator: generateWszystkoFeed, config: feedsConfig.wszystko },
 ];
 export const generateFeeds = async (bar) => {
 	return new Promise(async (resolve, reject) => {

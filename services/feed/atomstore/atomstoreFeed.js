@@ -34,9 +34,15 @@ const atomstoreFeed = async (
 				sellPrice,
 				images,
 			} = product;
+			const storeUrl = getStoreUrl(language, 'Rea');
 
-			titleWithVariantName(title[language], variantName[language]);
-
+			const newTitle = titleWithVariantName(
+				title[language],
+				variantName[language]
+			);
+			if (newTitle.toLowerCase().includes('allegro')) return;
+			if (newTitle.toLowerCase().includes('do usuniecia')) return;
+			if (newTitle.toLowerCase().includes('do usunięcia')) return;
 			if (activeProducts) {
 				if (!active) return;
 			}
@@ -45,16 +51,13 @@ const atomstoreFeed = async (
 			}
 			if (stock < minStock) return;
 
-			const storeUrl = getStoreUrl(language, 'Rea');
+			if (sku === '') return;
 
 			return {
 				active: stock > 0 ? 1 : 0,
 				sku,
 				ean,
-				title: titleWithVariantName(
-					title[language],
-					variantName[language]
-				),
+				title: newTitle,
 				description: description[language],
 				producer,
 				weight,
@@ -66,7 +69,50 @@ const atomstoreFeed = async (
 					.join(';'),
 			};
 		})
-		.filter(Boolean);
+		.filter(Boolean)
+		.reduce((previousValue, currentValue) => {
+			const prevIndex = previousValue.findIndex(
+				(prev) => prev.sku === currentValue.sku
+			);
+			if (prevIndex !== -1) return previousValue;
+			return [...previousValue, currentValue];
+		}, []);
+	return { products, language };
+};
+const atomstoreUpdateFeed = async (
+	data,
+	language,
+	{
+		mu = 0,
+		aliases = ['Rea', 'Tutumi', 'Toolight'],
+		activeProducts = true,
+		activeVariants = true,
+		minStock,
+	}
+) => {
+	const products = aliasesFilter(data, aliases)
+		.map((product) => {
+			const { sku, ean, stock, sellPrice } = product;
+
+			if (sku === '') return;
+
+			return {
+				active: stock > 0 ? 1 : 0,
+				sku,
+				ean,
+				stock,
+				price: addMuToPrice(sellPrice[language].price, mu),
+				vat: sellPrice[language].tax,
+			};
+		})
+		.filter(Boolean)
+		.reduce((previousValue, currentValue) => {
+			const prevIndex = previousValue.findIndex(
+				(prev) => prev.sku === currentValue.sku
+			);
+			if (prevIndex !== -1) return previousValue;
+			return [...previousValue, currentValue];
+		}, []);
 	return { products, language };
 };
 
@@ -78,6 +124,16 @@ export const generateAtomstoreFeed = async (products, config) => {
 					await saveFeedFileToDisk(
 						data,
 						'atomstore',
+						'csv',
+						'../generate/feed/'
+					);
+				}
+			);
+			await atomstoreUpdateFeed(products, language, config).then(
+				async (data) => {
+					await saveFeedFileToDisk(
+						data,
+						'atomstore_update',
 						'csv',
 						'../generate/feed/'
 					);

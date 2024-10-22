@@ -8,6 +8,7 @@ import ObjectsToCsv from 'objects-to-csv-file';
 import dotenv from 'dotenv';
 import ftp from 'basic-ftp';
 import path from 'path';
+
 dotenv.config({ path: '../.env' });
 
 const { FTP_HOST, FTP_PORT, FTP_USER, FTP_PASS, FTP_LOCATION } = process.env;
@@ -395,11 +396,12 @@ export const uploadFeeds = async (localFiles, bar) => {
 			secure: false,
 		});
 		await client.uploadFromDir(localFiles, FTP_LOCATION).catch((error) => {
-			if (error.code === 'ETIMEOUT') {
-				return uploadFeeds(localFiles, bar);
-			} else {
-				reject(error);
-			}
+			return uploadFeeds(localFiles, bar);
+			// if (error.code === 'ETIMEOUT') {
+			// } else {
+			// 	console.log(error);
+			// 	reject(error);
+			// }
 		});
 		bar.update(0, {
 			dane: 'Przesłano do FTP',

@@ -4,3 +4,4 @@ generate/feed
 /public/temp/data/*.json
 /services/feed-downloader/*.txt
 /public/temp/*.xml
+.env

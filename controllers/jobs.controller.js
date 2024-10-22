@@ -67,19 +67,20 @@ const bar = new cliProgress.SingleBar({
 });
 
 (async function cronJob() {
-	await getProductsFromFiles(bar).then(async (data) => {
-		await checkExisitngProducts(bar, data).then(async (data) => {
-			// await pushToDb(bar, data);
-		});
-	});
+	// await getProductsFromFiles(bar).then(async (data) => {
+	// 	await checkExisitngProducts(bar, data).then(async (data) => {
+	// 		// await pushToDb(bar, data);
+	// 	});
+	// });
+	//
+	while(true) {
 
-	// while (true) {
 	// await uploadProducts(bar).then(
-	// 	async () =>
-	// 		await generateFeeds(bar).then(
-	// 			async () => await uploadFeeds('../generate/feed', bar)
-	// 		)
+	// 	async () => 
+	await generateFeeds(bar).then(
+		async () => await uploadFeeds('../generate/feed', bar)
+	)
 	// );
-	// bar.updateETA();
-	// }
+	setTimeout(()=> {},1000*60*10)
+	}
 })();
