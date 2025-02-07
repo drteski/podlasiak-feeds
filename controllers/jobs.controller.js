@@ -1,21 +1,10 @@
-// import { CronJob } from 'cron';
-// import generateRozetkaFeed from '../services/generateRozetkaFeed.service.js';
-// import {
-// 	uploadProducts,
-// 	uploadStockAndPrices,
-// } from '../services/products/uploadProducts.js';
-import {
-	getProductsFromFiles,
-	uploadProducts,
-} from '../services/products/uploadProducts.js';
+import { uploadProducts } from '../services/products/uploadProducts.js';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { generateFeeds } from './updateFeeds.controller.js';
 import cliProgress from 'cli-progress';
 import ansiColors from 'ansi-colors';
 import { uploadFeeds } from '../services/processFeed.js';
-import { checkExisitngProducts } from '../services/products/services/checkExisitngProducts.js';
-import { pushToDb } from '../services/products/services/pushToDb.js';
 
 dotenv.config({ path: '../.env' });
 
@@ -66,21 +55,13 @@ const bar = new cliProgress.SingleBar({
 	hideCursor: true,
 });
 
-(async function cronJob() {
-	// await getProductsFromFiles(bar).then(async (data) => {
-	// 	await checkExisitngProducts(bar, data).then(async (data) => {
-	// 		// await pushToDb(bar, data);
-	// 	});
-	// });
-	//
-	while(true) {
-
-	// await uploadProducts(bar).then(
-	// 	async () => 
-	await generateFeeds(bar).then(
-		async () => await uploadFeeds('../generate/feed', bar)
-	)
-	// );
-	setTimeout(()=> {},1000*60*10)
-	}
-})();
+// while (true) {
+// await uploadProducts(bar)
+// 	.then(
+// 		async () =>
+await generateFeeds(bar)
+	.then(async () => await uploadFeeds('../generate/feed', bar))
+	.catch((error) => console.log(error));
+// )
+// .catch((error) => console.log(error));
+// }

@@ -16,12 +16,18 @@ const wszystkoFeed = async (
 		minStock,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases);
-	const headers = products
+	// const products = aliasesFilter(data, aliases);
+	const headers = data
 		.sort((a, b) => b.images.length - a.images.length)
 		.map((product) => {
-			const { active, activeVariant, stock, images, attributes } =
-				product;
+			const {
+				active,
+				activeVariant,
+				stock,
+				variantId,
+				images,
+				attributes,
+			} = product;
 
 			const imagesObj = images.reduce((prev, curr, index) => {
 				return {
@@ -33,12 +39,16 @@ const wszystkoFeed = async (
 			const attributesObj =
 				attributes[language].length === undefined
 					? [attributes[language]].reduce((prev, curr) => {
+							if (curr.name === '')
+								console.log(curr.name, variantId);
 							return {
 								...prev,
 								[`${curr.name}`]: '',
 							};
 						}, {})
 					: attributes[language].reduce((prev, curr) => {
+							if (curr.name === '')
+								console.log(curr.name, variantId);
 							return {
 								...prev,
 								[`${curr.name}`]: '',
@@ -76,7 +86,7 @@ const wszystkoFeed = async (
 			};
 		}, {});
 
-	const productsAllData = products.reduce((prev, curr) => {
+	const productsAllData = data.reduce((prev, curr) => {
 		const {
 			active,
 			id,
@@ -99,13 +109,13 @@ const wszystkoFeed = async (
 			images,
 		} = curr;
 
-		if (activeProducts) {
-			if (!active) return;
-		}
-		if (activeVariants) {
-			if (!activeVariant) return;
-		}
-		if (stock < minStock) return;
+		// if (activeProducts) {
+		// 	if (!active) return;
+		// }
+		// if (activeVariants) {
+		// 	if (!activeVariant) return;
+		// }
+		// if (stock < minStock) return;
 
 		const storeUrl = getStoreUrl(language, 'Rea');
 

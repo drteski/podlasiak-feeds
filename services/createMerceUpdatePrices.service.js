@@ -1,418 +1,213 @@
-import csvtojson from 'csvtojson';
-import downloadHandler from '../utilities/downloadCsv.utility.js';
 import ObjectsToCsv from 'objects-to-csv-file';
 import fs from 'fs';
+import {
+	connectToGoogleSheets,
+	getDataFromSheets,
+} from '../utilities/googleSheets.js';
+import { tariffConfig } from '../config/config.js';
 import { format } from 'date-fns';
 
-const pricesUrl =
-	'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7lmkzoao6EluUNJig_HzXCwciFERNvdpuKEothGa-ZhMkDuZKHoQrDMaZ36LOoZMlUVbgXExTJLDI/pub?gid=0&single=true&output=csv';
+const flatten = (arr) =>
+	arr.reduce((a, v) => {
+		v instanceof Array ? a.push(...flatten(v)) : a.push(v);
+		return a;
+	}, []);
 
-const config = [
-	{
-		tariff: 1,
-		tax: 23,
-		currency: 'PLN',
-	},
-	{
-		tariff: 2,
-		tax: 23,
-		currency: 'PLN',
-	},
-	{
-		tariff: 5,
-		tax: 21,
-		currency: 'CZK',
-	},
-	{
-		tariff: 6,
-		tax: 21,
-		currency: 'CZK',
-	},
-	{
-		tariff: 7,
-		tax: 27,
-		currency: 'HUF',
-	},
-	{
-		tariff: 8,
-		tax: 27,
-		currency: 'HUF',
-	},
-	{
-		tariff: 9,
-		tax: 20,
-		currency: 'GBP',
-	},
-	{
-		tariff: 10,
-		tax: 20,
-		currency: 'GBP',
-	},
-	{
-		tariff: 11,
-		tax: 19,
-		currency: 'EUR',
-	},
-	{
-		tariff: 12,
-		tax: 19,
-		currency: 'EUR',
-	},
-	{
-		tariff: 13,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 14,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 15,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 16,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 17,
-		tax: 20,
-		currency: 'USD',
-	},
-	{
-		tariff: 18,
-		tax: 20,
-		currency: 'USD',
-	},
-	{
-		tariff: 19,
-		tax: 19,
-		currency: 'RON',
-	},
-	{
-		tariff: 20,
-		tax: 19,
-		currency: 'RON',
-	},
-	{
-		tariff: 21,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 22,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 23,
-		tax: 22,
-		currency: 'EUR',
-	},
-	{
-		tariff: 24,
-		tax: 22,
-		currency: 'EUR',
-	},
-	{
-		tariff: 25,
-		tax: 20,
-		currency: 'BGN',
-	},
-	{
-		tariff: 26,
-		tax: 20,
-		currency: 'BGN',
-	},
-	{
-		tariff: 27,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 28,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 29,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 30,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 31,
-		tax: 25,
-		currency: 'EUR',
-	},
-	{
-		tariff: 32,
-		tax: 25,
-		currency: 'EUR',
-	},
-	{
-		tariff: 33,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 34,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 35,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 36,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 37,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 38,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 39,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 40,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 41,
-		tax: 20,
-		currency: 'RSD',
-	},
-	{
-		tariff: 42,
-		tax: 20,
-		currency: 'RSD',
-	},
-	{
-		tariff: 43,
-		tax: 23,
-		currency: 'EUR',
-	},
-	{
-		tariff: 44,
-		tax: 23,
-		currency: 'EUR',
-	},
-	{
-		tariff: 45,
-		tax: 22,
-		currency: 'EUR',
-	},
-	{
-		tariff: 46,
-		tax: 22,
-		currency: 'EUR',
-	},
-	{
-		tariff: 47,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 48,
-		tax: 20,
-		currency: 'EUR',
-	},
-	{
-		tariff: 49,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 50,
-		tax: 21,
-		currency: 'EUR',
-	},
-	{
-		tariff: 51,
-		tax: 23,
-		currency: 'EUR',
-	},
-	{
-		tariff: 52,
-		tax: 23,
-		currency: 'EUR',
-	},
-	{
-		tariff: 53,
-		tax: 24,
-		currency: 'EUR',
-	},
-	{
-		tariff: 54,
-		tax: 24,
-		currency: 'EUR',
-	},
-	{
-		tariff: 55,
-		tax: 24,
-		currency: 'EUR',
-	},
-	{
-		tariff: 56,
-		tax: 24,
-		currency: 'EUR',
-	},
-];
+const chunker = (array, chunkSize) => {
+	const dataChunks = [];
+	for (let i = 0; i < array.length; i += chunkSize) {
+		const chunks = array.slice(i, i + chunkSize);
+		dataChunks.push(chunks);
+	}
+	return dataChunks;
+};
 
-const getPricesFile = (url) => {
-	return new Promise(async (resolve, reject) => {
-		const file = await downloadHandler(
-			url,
-			'../generate/merce/',
-			'prices.csv'
-		);
-		if (file === 'Pobrane') {
-			const priceData = await csvtojson()
-				.fromFile('../generate/merce/prices.csv')
-				.then((json) => {
-					return json;
-				});
-			resolve(priceData);
-		} else {
-			reject(file);
-		}
+const repairUndefinedData = (data) => {
+	return new Promise(async (resolve) => {
+		const repairedData = data.map((item) => {
+			const newItem = {};
+
+			Object.entries(item).forEach(([key, value]) => {
+				return (newItem[key] = value === undefined ? '' : value);
+			});
+
+			return newItem;
+		});
+		resolve(repairedData);
 	});
 };
 
-const processPrices = async () => {
-	const data = await getPricesFile(pricesUrl).then((res) => res);
+const convertToImportData = (data) => {
+	return new Promise(async (resolve) => {
+		const pricesVariant = [];
+		const pricesProduct = [];
+		data.forEach((item) => {
+			const { id, variantId } = item;
+			const priceType = variantId === '' ? 'product' : 'variant';
+			for (const [key, value] of Object.entries(item)) {
+				if (key.includes('_')) {
+					const tariffId = parseInt(key.split('_')[1]);
+					const config = tariffConfig.filter(
+						(item) => item.tariff === tariffId
+					);
 
-	const pricesVariant = [];
-	const pricesProduct = [];
-	data.forEach((item) => {
-		const { id, variantId } = item;
-		const priceType = variantId === '' ? 'product' : 'variant';
-		for (const [key, value] of Object.entries(item)) {
-			if (key.includes('_')) {
-				const tariffId = parseInt(key.split('_')[1]);
-				const conf = config.filter((item) => item.tariff === tariffId);
-
-				if (priceType === 'product') {
-					pricesProduct.push({
-						objectId: `${tariffId}_${priceType}_${id}`,
-						tariffId,
-						// itemType: priceType,
-						itemId: id,
-						grossPrice: value,
-						tax: conf[0].tax,
-						currency: conf[0].currency,
-					});
-				} else {
-					pricesVariant.push({
-						objectId: `${tariffId}_${priceType}_${variantId}`,
-						tariffId,
-						// itemType: priceType,
-						itemId: variantId,
-						grossPrice: value,
-						tax: conf[0].tax,
-						currency: conf[0].currency,
-					});
+					if (priceType === 'product') {
+						pricesProduct.push({
+							objectId: `${tariffId}_${priceType}_${id}`,
+							tariffId,
+							itemId: id,
+							grossPrice: value,
+							tax: config[0].tax,
+							currency: config[0].currency,
+						});
+					} else {
+						pricesVariant.push({
+							objectId: `${tariffId}_${priceType}_${variantId}`,
+							tariffId,
+							itemId: variantId,
+							grossPrice: value,
+							tax: config[0].tax,
+							currency: config[0].currency,
+						});
+					}
 				}
 			}
-		}
-	});
-
-	const flatten = (arr) =>
-		arr.reduce((a, v) => {
-			v instanceof Array ? a.push(...flatten(v)) : a.push(v);
-			return a;
-		}, []);
-
-	const products = flatten(pricesProduct)
-		.filter((item) => item.grossPrice !== '')
-		.map((prod) => {
-			return {
-				...prod,
-				grossPrice:
-					prod.grossPrice === '0'
-						? ''
-						: prod.grossPrice.replace('.00', ''),
-			};
 		});
-	const variants = flatten(pricesVariant)
-		.filter((item) => item.grossPrice !== '')
-		.map((prod) => {
-			return {
-				...prod,
-				grossPrice:
-					prod.grossPrice === '0'
-						? ''
-						: prod.grossPrice.replace('.00', ''),
-			};
-		});
-	const product = new ObjectsToCsv(
-		flatten(pricesProduct).filter((item) => item.grossPrice !== '')
-	);
-	const variant = new ObjectsToCsv(
-		flatten(pricesVariant).filter((item) => item.grossPrice !== '')
-	);
-
-	fs.mkdir(
-		`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}`,
-		(err) => {
-			if (err.code !== 'EEXIST') console.log(err);
-		}
-	);
-
-	const arrayChunk = 5000;
-	const productsChunks = [];
-	const variantChunks = [];
-
-	for (let i = 0; i < products.length; i += arrayChunk) {
-		const chunks = products.slice(i, i + arrayChunk);
-		productsChunks.push(chunks);
-	}
-	for (let i = 0; i < variants.length; i += arrayChunk) {
-		const chunks = variants.slice(i, i + arrayChunk);
-		variantChunks.push(chunks);
-	}
-
-	const productFiles = productsChunks.map(async (chunk, index) => {
-		const productChunk = new ObjectsToCsv(chunk);
-		await productChunk.toDisk(
-			`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${index + 1}_product_${format(new Date(), 'dd-MM-yyyy_HH-mm-ss')}.csv`,
-			{
-				delimiter: ';',
-			}
-		);
+		const variant = flatten(pricesVariant)
+			.filter((item) => item.grossPrice !== '')
+			.map((prod) => {
+				return {
+					...prod,
+					grossPrice:
+						prod.grossPrice === '0'
+							? ''
+							: prod.grossPrice.replace('.00', ''),
+				};
+			});
+		const product = flatten(pricesProduct)
+			.filter((item) => item.grossPrice !== '')
+			.map((prod) => {
+				return {
+					...prod,
+					grossPrice:
+						prod.grossPrice === '0'
+							? ''
+							: prod.grossPrice.replace('.00', ''),
+				};
+			});
+		resolve({ variant, product });
 	});
-	const variantFiles = variantChunks.map(async (chunk, index) => {
-		const variantChunk = new ObjectsToCsv(chunk);
-		await variantChunk.toDisk(
-			`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${index + 1}_variant_${format(new Date(), 'dd-MM-yyyy_HH-mm-ss')}.csv`,
-			{
-				delimiter: ';',
-			}
-		);
-	});
-	await Promise.all(productFiles);
-	await Promise.all(variantFiles);
 };
 
-processPrices();
+const splitDataToCountriesAndChunks = (data) => {
+	return new Promise((resolve) => {
+		const { variant, product } = data;
+		const countriesVariant = variant.reduce(
+			(previousValue, currentValue) => {
+				const tariffIndex = tariffConfig.findIndex(
+					(tariff) => tariff.tariff === currentValue.tariffId
+				);
+				if (previousValue[tariffConfig[tariffIndex].country]) {
+					previousValue[tariffConfig[tariffIndex].country] = [
+						...previousValue[tariffConfig[tariffIndex].country],
+						currentValue,
+					];
+					return previousValue;
+				} else {
+					previousValue[tariffConfig[tariffIndex].country] = [
+						currentValue,
+					];
+					return previousValue;
+				}
+			},
+			{}
+		);
+		const countriesProduct = product.reduce(
+			(previousValue, currentValue) => {
+				const tariffIndex = tariffConfig.findIndex(
+					(tariff) => tariff.tariff === currentValue.tariffId
+				);
+				if (previousValue[tariffConfig[tariffIndex].country]) {
+					previousValue[tariffConfig[tariffIndex].country] = [
+						...previousValue[tariffConfig[tariffIndex].country],
+						currentValue,
+					];
+					return previousValue;
+				} else {
+					previousValue[tariffConfig[tariffIndex].country] = [
+						currentValue,
+					];
+					return previousValue;
+				}
+			},
+			{}
+		);
+		const splitedVariant = {};
+		const splitedProduct = {};
+
+		Object.entries(countriesVariant).forEach(([key, value]) => {
+			splitedVariant[key] = chunker(value, 5000);
+		});
+		Object.entries(countriesProduct).forEach(([key, value]) => {
+			splitedProduct[key] = chunker(value, 5000);
+		});
+
+		resolve({ splitedVariant, splitedProduct });
+	});
+};
+
+const saveDataToFiles = (data) => {
+	return new Promise((resolve) => {
+		const { splitedVariant, splitedProduct } = data;
+		fs.mkdir(
+			`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}`,
+			(err) => err && resolve(err)
+		);
+		Object.entries(splitedVariant).forEach(([key, value]) => {
+			fs.mkdir(
+				`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}`,
+				(err) => err && resolve(err)
+			);
+			value.map(async (chunk, index) => {
+				const productChunk = new ObjectsToCsv(chunk);
+				await productChunk.toDisk(
+					`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}/${index + 1}_variant_${key.toLowerCase()}_${format(new Date(), 'dd-MM-yyyy_HH-mm-ss')}.csv`,
+					{
+						delimiter: ';',
+					}
+				);
+			});
+		});
+		Object.entries(splitedProduct).forEach(([key, value]) => {
+			fs.mkdir(
+				`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}`,
+				(err) => err && resolve(err)
+			);
+			value.map(async (chunk, index) => {
+				const productChunk = new ObjectsToCsv(chunk);
+				await productChunk.toDisk(
+					`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}/${index + 1}_product_${key.toLowerCase()}_${format(new Date(), 'dd-MM-yyyy_HH-mm-ss')}.csv`,
+					{
+						delimiter: ';',
+					}
+				);
+			});
+		});
+
+		resolve('Zapisano');
+	});
+};
+
+await connectToGoogleSheets(
+	'1txUfuOznT1I6OdW73UswDTxgOemQ2uMdlIuYjK5dTLI'
+).then((document) =>
+	getDataFromSheets(document, 'zmiany cen').then((data) =>
+		repairUndefinedData(data).then((data) =>
+			convertToImportData(data).then((data) =>
+				splitDataToCountriesAndChunks(data).then((data) =>
+					saveDataToFiles(data).then((data) => console.log(data))
+				)
+			)
+		)
+	)
+);

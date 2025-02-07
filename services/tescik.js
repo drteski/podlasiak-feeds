@@ -718,28 +718,28 @@ const generateAiData = async () => {
 	}
 };
 
-// generateAiData();
+generateAiData();
 
 const files = fs.readdirSync('./prods');
 
 const products = files.map((file) => {
-	const data = fs.readFileSync('./prods/' + file, 'utf8');
-	const product = JSON.parse(data);
-	const productText = JSON.parse(
-		jsonrepair(
-			product.text
-				.replace('```json', '')
-				.replace('```', '')
-				.split('')
-				.map((char) => {
-					if (char === '(') return '{';
-					if (char === ')') return '}';
-					return char;
-				})
-				.join('')
-		)
-	);
-	console.dir({ sku: product.sku, productText }, { depth: null });
+	// const data = fs.readFileSync('./prods/' + file, 'utf8');
+	// const product = JSON.parse(data);
+	// const productText = JSON.parse(
+	// 	jsonrepair(
+	// 		product.text
+	// 			.replace('```json', '')
+	// 			.replace('```', '')
+	// 			.split('')
+	// 			.map((char) => {
+	// 				if (char === '(') return '{';
+	// 				if (char === ')') return '}';
+	// 				return char;
+	// 			})
+	// 			.join('')
+	// 	)
+	// );
+	// console.dir({ sku: product.sku, productText }, { depth: null });
 	// return {
 	// 	sku: product.sku,
 	// 	title: productText.title,

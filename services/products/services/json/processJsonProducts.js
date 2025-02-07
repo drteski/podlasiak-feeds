@@ -27,6 +27,32 @@ export const processJsonProducts = (fileName, data) => {
 		producers,
 	} = data;
 	products.forEach((product) => {
+		processedProducts.push({
+			aliases: mapAliases(product.aliases, aliases),
+			id: product.$id,
+			active: product.$active === 'true' ? 1 : 0,
+			variantId: '',
+			activeVariant: '',
+			sku: '',
+			ean: '',
+			weight: parseFloat(product.$weight),
+			title: mapSimpleData(product.titles.title),
+			variantName: mapSimpleData([]),
+			url: mapUrls(product.urls, aliases),
+			stock: 0,
+			producer: mapProducers(product.$producer, producers),
+			description: mapSimpleData(product.descriptions.description),
+			categories: mapCategories(product.categories, categories),
+			images: mapImages(product.images),
+			price: mapPrices(product.basePrice),
+			promoPrice: mapPrices(product.sellPrice),
+			attributes: mapProfiles(
+				product.profiles,
+				profiles,
+				profileFields,
+				profileFieldsChoices
+			),
+		});
 		if (product.variants.variant.length === undefined) {
 			processedProducts.push({
 				aliases: mapAliases(product.aliases, aliases),

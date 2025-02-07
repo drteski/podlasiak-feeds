@@ -31,10 +31,10 @@ const mdfFeed = async (
 				title,
 				description,
 				variantName,
-				sellPrice,
+				basePrice,
 				images,
 			} = product;
-
+			if (variantId === '') return;
 			if (activeProducts) {
 				if (!active) return;
 			}
@@ -47,10 +47,10 @@ const mdfFeed = async (
 			const prices = languages.reduce((previousValue, currentValue) => {
 				return {
 					...previousValue,
-					[`${currentValue}_${sellPrice[currentValue].currency}`.replace(
+					[`${currentValue}_${basePrice[currentValue].currency}`.replace(
 						'ga',
 						'ie'
-					)]: addMuToPrice(sellPrice[currentValue].price, mu),
+					)]: addMuToPrice(basePrice[currentValue].price, mu),
 				};
 			}, {});
 

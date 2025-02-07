@@ -14,8 +14,10 @@ for (const [key, value] of Object.entries(feedsConfig)) {
 }
 const HEADERS = [
 	'uid',
+	'active',
 	'id',
 	'variantId',
+	'activeVariant',
 	'sku',
 	'ean',
 	'brand',
@@ -58,8 +60,8 @@ const connectToGoogleSheets = () => {
 				serviceAccountAuth
 			);
 			await doc.loadInfo();
-			const sheet = await doc.sheetsByTitle['Products'];
-			resolve(sheet);
+			console.log('Połączono z Google Sheets');
+			resolve(doc);
 		} catch (error) {
 			console.log(error);
 			reject(error);
@@ -67,35 +69,122 @@ const connectToGoogleSheets = () => {
 	});
 };
 
-const checkGoogleSheetsData = (document) => {
+const createOrSelectSheetGoogleSheets = (document) => {
 	return new Promise(async (resolve) => {
-		const rows = await document.getRows();
-		if (rows.length === 1 && rows[0].get('id') === 'id') {
-			resolve({ data: [], document });
-		} else {
-			await document.loadCells();
-			const data = rows.map((row, rowIndex) => {
-				const item = {};
-				document.headerValues.forEach((headerValue, columnIndex) => {
-					const cellValue = document.getCell(
-						rowIndex + 1,
-						columnIndex
-					).formattedValue;
-					if (cellValue === 'TRUE') return (item[headerValue] = true);
-					if (cellValue === 'FALSE')
-						return (item[headerValue] = false);
-					if (
-						headerValue === 'uid' ||
-						headerValue === 'id' ||
-						headerValue === 'variantId'
-					)
-						return (item[headerValue] = parseInt(cellValue));
-					return (item[headerValue] = cellValue);
-				});
-				return item;
-			});
-			resolve({ data, document });
+		console.log('Pobieranie Arkuszy');
+		const sheets = await document.sheetsByTitle;
+		const sheetTitles = [];
+		for (const title of Object.keys(sheets)) {
+			sheetTitles.push(title);
 		}
+		console.log('Pobieranie danych z bazy');
+		const dbProducts = await Product.find();
+		const products = dbProducts.map((product) => ({
+			uid: product.uid,
+			active: product.active,
+			id: product.id,
+			activeVariant: product.activeVariant,
+			variantId: product.variantId,
+			sku: product.sku,
+			ean: product.ean,
+			brand: product.producer,
+			aliases: product.aliases.join(', '),
+			name: product.title[0].pl,
+			variantName: product.variantName[0].pl,
+		}));
+		console.log('Przetwarzanie danych');
+		const productsBrands = products
+			.map((product) => product.brand)
+			.reduce((prev, curr) => {
+				if (prev.some((name) => name === curr)) return prev;
+				return [...prev, curr];
+			}, []);
+		console.log('Sprawdzanie Arkuszy');
+		const notExistingSheets = productsBrands.filter((brand) => {
+			const exist = sheetTitles.includes(
+				brand === '' ? 'Brak producenta' : brand
+			);
+			return !exist;
+		});
+		console.log('Dodawanie brakujących Arkuszy');
+		notExistingSheets.map(async (notExisiting) => {
+			if (notExisiting === '')
+				return await document.addSheet({
+					title: 'Brak producenta',
+					headerValues: HEADERS,
+					headerRowIndex: 0,
+				});
+			return await document.addSheet({
+				title: notExisiting,
+				headerValues: HEADERS,
+				headerRowIndex: 0,
+			});
+		});
+		console.log('Dodano brakujące Arkusze');
+		console.log('-----');
+		resolve({ sheetTitles: productsBrands, products, document });
+	});
+};
+
+const setSheetFormatingGoogleSheets = ({ sheetTitles, products, document }) => {
+	return new Promise(async (resolve) => {
+		const sheets = await document.sheetsByTitle;
+		const loadedSheets = [];
+		for (const sheet of Object.values(sheets)) {
+			loadedSheets.push(sheet);
+		}
+
+		loadedSheets.map(async (sheet) => {
+			const rows = await sheet.getRows();
+			if (rows.length !== 1 && rows[0].get('id') !== 'id') {
+				await sheet.resize({
+					columnCount: HEADERS.length,
+					rowCount: 2,
+				});
+			}
+		});
+		resolve({ sheetTitles, products, documents: loadedSheets });
+	});
+};
+
+const checkGoogleSheetsData = ({ products, documents }) => {
+	return new Promise(async (resolve) => {
+		const items = documents.map(async (document) => {
+			console.log(document.headerValues);
+			const rows = await document.getRows();
+			if (rows.length === 1 && rows[0].get('id') === 'id') {
+				return { data: [], document };
+			} else {
+				await document.loadCells();
+				const data = rows.map((row, rowIndex) => {
+					const item = {};
+					document.headerValues.forEach(
+						(headerValue, columnIndex) => {
+							const cellValue = document.getCell(
+								rowIndex + 1,
+								columnIndex
+							).formattedValue;
+							if (cellValue === 'TRUE')
+								return (item[headerValue] = true);
+							if (cellValue === 'FALSE')
+								return (item[headerValue] = false);
+							if (
+								headerValue === 'uid' ||
+								headerValue === 'id' ||
+								headerValue === 'variantId'
+							)
+								return (item[headerValue] =
+									parseInt(cellValue));
+							return (item[headerValue] = cellValue);
+						}
+					);
+					return item;
+				});
+				return { data, document };
+			}
+		});
+		console.log(items, products);
+		resolve({ items, products });
 	});
 };
 
@@ -120,9 +209,11 @@ const compareGoogleSheetsData = ({ data, document }) => {
 		const updatedData = await checkAndUpdateHeaders(data, document);
 
 		const products = await Product.find();
-		const prod = products.slice(100, 110).map((product) => ({
+		const prod = products.map((product) => ({
 			uid: product.uid,
+			active: product.active,
 			id: product.id,
+			activeVariant: product.activeVariant,
 			variantId: product.variantId,
 			sku: product.sku,
 			ean: product.ean,
@@ -150,45 +241,96 @@ const compareGoogleSheetsData = ({ data, document }) => {
 };
 const populateGoogleSheets = ({ data, document }) => {
 	return new Promise(async (resolve) => {
-		const rows = await document.getRows();
-		// const rowsToDelete = rows.filter(
-		// 	(row) => typeof row.get('uid') !== 'string'
+		if (data.length === 0) return resolve(document);
+		await document.addRows(data);
+		resolve(document);
+	});
+};
+const setValidationGoogleSheets = (document) => {
+	return new Promise(async (resolve) => {
+		await document.setDataValidation([
+			{
+				startColumnIndex: 2,
+				endColumnIndex: 2,
+				startRowIndex: 1,
+				endRowIndex: document.rowCount,
+			},
+			{
+				condition: {
+					type: 'BOOLEAN',
+					values: [
+						{ userEnteredValue: 'TRUE' },
+						{ userEnteredValue: 'FALSE' },
+					],
+				},
+				strict: true,
+				showCustomUi: true,
+			},
+		]);
+		// await document.setDataValidation(
+		// 	{
+		// 		startColumnIndex: 4,
+		// 		endColumnIndex: 4,
+		// 		startRowIndex: 1,
+		// 		endRowIndex: document.rowCount,
+		// 	},
+		// 	{
+		// 		condition: {
+		// 			type: 'BOOLEAN',
+		// 			values: [
+		// 				{ userEnteredValue: 'TRUE' },
+		// 				{ userEnteredValue: 'FALSE' },
+		// 			],
+		// 		},
+		// 		strict: true,
+		// 		showCustomUi: true,
+		// 	}
 		// );
-		// await Promise.all(rowsToDelete.reverse().map((row) => row.delete()));
-		// console.log('');
-		// console.log(rowsToDelete.length);
-		// console.log(document.rowCount);
-		const addedItems = data.map(async (product, rowIndex) => {
-			await document.addRow(product);
-			(() => {
-				setTimeout(() => {}, 100);
-			})();
-
-			// Object.entries(product).forEach((object, cellIndex) => {
-			// 	const cell = document.getCell(rowIndex, cellIndex);
-			// 	if (cellIndex <= 8) {
-			// 		cell.value = object[1];
-			// 		cell.textFormat = { bold: false };
-			// 	} else {
-			// 		cell.value = object[1] === true ? 'TRUE' : 'FALSE';
-			// 		cell.textFormat = { bold: false };
-			// 	}
-			// });
-			// for (const [keys, index, i] of Object.entries(product)) {
-			// 	console.log(keys, index, i);
-			// }
-			// await document.addRow(product);
-		});
+		// await document.setDataValidation(
+		// 	{
+		// 		startColumnIndex: HEADERS.length - feeds.length,
+		// 		endColumnIndex: HEADERS.length,
+		// 		startRowIndex: 1,
+		// 		endRowIndex: document.rowCount,
+		// 	},
+		// 	{
+		// 		condition: {
+		// 			type: 'BOOLEAN',
+		// 			values: [
+		// 				{ userEnteredValue: 'TRUE' },
+		// 				{ userEnteredValue: 'FALSE' },
+		// 			],
+		// 		},
+		// 		strict: true,
+		// 		showCustomUi: true,
+		// 	}
+		// );
+		resolve(document);
+	});
+};
+const setFormatingsGoogleSheets = (document) => {
+	return new Promise(async (resolve) => {
+		// await document.loadCells();
 		resolve();
 	});
 };
 
-await connectToGoogleSheets().then((data) => {
-	checkGoogleSheetsData(data).then((data) => {
-		compareGoogleSheetsData(data).then((data) => {
-			populateGoogleSheets(data).then(async () => {
-				await mongoose.connection.close();
-			});
-		});
-	});
-});
+// await connectToGoogleSheets().then((data) => {
+// 	createOrSelectSheetGoogleSheets(data).then((data) => {
+// 		setSheetFormatingGoogleSheets(data).then((data) => {
+// 			checkGoogleSheetsData(data);
+// 		});
+// 	});
+// checkGoogleSheetsData(data).then((data) => {
+// 	compareGoogleSheetsData(data).then((data) => {
+// 		populateGoogleSheets(data).then((data) => {
+// 			setValidationGoogleSheets(data).then((data) => {
+// 				setFormatingsGoogleSheets(data).then(async () => {
+//
+// 				});
+// 			});
+// 		});
+// 	});
+// });
+// });
+// await mongoose.connection.close();

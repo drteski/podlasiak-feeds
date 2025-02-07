@@ -1,36 +1,53 @@
 import { feedsConfig } from '../config/config.js';
-import dotenv from 'dotenv';
 
 import { getProducts } from '../services/processFeed.js';
 import { generateRozetkaFeed } from '../services/feed/rozetka/rozetkaFeed.js';
-import fs from 'fs';
 import { generatePepitaFeed } from '../services/feed/pepita/pepitaFeed.js';
 import { generateWszystkoFeed } from '../services/feed/wszystko/wszystkoFeed.js';
 import { generateMatrixifyFeed } from '../services/feed/matrixify/matrixifyFeed.js';
 import { generateMdfFeed } from '../services/feed/mdf/mdfFeed.js';
 import { generateAtomstoreFeed } from '../services/feed/atomstore/atomstoreFeed.js';
 import { generateToolightCatalogFeed } from '../services/feed/toolight-catalog/toolightCatalogFeed.js';
-//
-// dotenv.config({ path: '../.env' });
-//
+import { generateBazzarFeed } from '../services/feed/bazzar/bazzarFeed.js';
+import { generateGalaxusFeed } from '../services/feed/galaxus/galaxusFeed.js';
+import { generateSkroutzFeed } from '../services/feed/skroutz/feedSkroutz.js';
+import { generateSubiektFeed } from '../services/feed/subiekt/subiektFeed.js';
+import { generateCatalogPatrycjaFeed } from '../services/feed/catalog-patrycja/catalogPatrycjaFeed.js';
+import { generateCeneoFeed } from '../services/feed/ceneo/ceneoFeed.js';
+import { generateJeftinieFeed } from '../services/feed/jeftinie/jeftinieFeed.js';
+import { generateBianoFeed } from '../services/feed/biano/bianoFeed.js';
+import { generateFyndiqFeed } from '../services/feed/fyndq/fyndqFeed.js';
 
 const feedGenerators = [
+	{ generator: generateCeneoFeed, config: feedsConfig.ceneo },
 	{ generator: generateRozetkaFeed, config: feedsConfig.rozetka },
-	// { generator: generatePepitaFeed, config: feedsConfig.pepita },
-	// { generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
-	// { generator: generateMdfFeed, config: feedsConfig.mdf },
-	// { generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
+	{ generator: generateBazzarFeed, config: feedsConfig.bazzar },
+	{ generator: generatePepitaFeed, config: feedsConfig.pepita },
+	{ generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
+	{ generator: generateMdfFeed, config: feedsConfig.mdf },
+	{ generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
+	{ generator: generateGalaxusFeed, config: feedsConfig.galaxus },
+	{ generator: generateSkroutzFeed, config: feedsConfig.skroutz },
 	// {
 	// 	generator: generateToolightCatalogFeed,
 	// 	config: feedsConfig.toolightCatalog,
 	// },
-	// { generator: generateWszystkoFeed, config: feedsConfig.wszystko },
+	{
+		generator: generateCatalogPatrycjaFeed,
+		config: feedsConfig.catalogPatrycja,
+	},
+	{ generator: generateFyndiqFeed, config: feedsConfig.fyndiq },
+	{ generator: generateBianoFeed, config: feedsConfig.biano },
+	{ generator: generateJeftinieFeed, config: feedsConfig.jeftinie },
+	{ generator: generateWszystkoFeed, config: feedsConfig.wszystko },
 ];
 export const generateFeeds = async (bar) => {
 	return new Promise(async (resolve, reject) => {
-		const products = await getProducts().then((data) => data);
+		const products = await getProducts()
+			.then((data) => data)
+			.catch((error) => reject(error));
 
-		if (products.length === 0) return reject();
+		if (products.length === 0) return reject('Brak produktów');
 
 		const progress = {
 			bar,
@@ -59,7 +76,15 @@ export const generateFeeds = async (bar) => {
 			setTimeout(() => {}, 1000);
 			progress.accumulator++;
 		}
-
+		bar.start(0, 1, {
+			dane: 'Przesyłanie danych z Subiekta',
+			additionalData: ``,
+		});
+		await generateSubiektFeed();
+		bar.update(1, {
+			dane: 'Przesłano dane z Subiekta',
+			additionalData: ``,
+		});
 		resolve();
 	});
 };

@@ -270,7 +270,7 @@ const apiloClient = async (account) => {
 			localStorage.setItem(sku, JSON.stringify(uploadedImages));
 		}
 		const existInApilo = await getProduct(account, sku);
-		console.log(sku);
+
 		if (!existInApilo) {
 			await createProduct(account, {
 				sku,

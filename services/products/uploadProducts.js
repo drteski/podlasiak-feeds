@@ -2,6 +2,7 @@ import { processProducts } from './controllers/processJsonData.js';
 import fs from 'fs';
 import { pushProduct } from './services/product/pushProduct.js';
 import dotenv from 'dotenv';
+import Product from '../../models/Product.js';
 
 dotenv.config({ path: '../.env' });
 
@@ -21,7 +22,7 @@ export const uploadProducts = async (bar) => {
 			dane: 'Przetwarzanie plików',
 			additionalData: '',
 		});
-
+		await Product.deleteMany();
 		const products = [];
 		for await (const [index, file] of productsFiles.entries()) {
 			bar.update(index + 1);

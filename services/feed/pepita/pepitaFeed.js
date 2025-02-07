@@ -37,7 +37,7 @@ const pepitaFeed = async (
 				images,
 				sellPrice,
 			} = product;
-
+			if (variantId === '') return;
 			if (activeProducts) {
 				if (!active) return;
 			}

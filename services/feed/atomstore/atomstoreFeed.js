@@ -23,6 +23,7 @@ const atomstoreFeed = async (
 			const {
 				active,
 				activeVariant,
+				variantId,
 				sku,
 				ean,
 				weight,
@@ -34,6 +35,7 @@ const atomstoreFeed = async (
 				sellPrice,
 				images,
 			} = product;
+			if (variantId === '') return;
 			const storeUrl = getStoreUrl(language, 'Rea');
 
 			const newTitle = titleWithVariantName(

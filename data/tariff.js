@@ -75,7 +75,7 @@ export const tariff = [
 		tariff: 13,
 		lang: 'uk',
 		tax: 20,
-		currency: 'EUR',
+		currency: 'UAH',
 	},
 	{
 		tariff: 14,
