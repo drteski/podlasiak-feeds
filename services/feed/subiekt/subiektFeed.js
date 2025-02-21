@@ -18,7 +18,7 @@ const sqlConfig = {
 	},
 };
 
-const getSubiektProducts = async () => {
+export const getSubiektProducts = async () => {
 	return new Promise(async (resolve) => {
 		await sql.connect(sqlConfig);
 		const queryProducts = await sql.query`SELECT * FROM tw__Towar`;

@@ -174,7 +174,11 @@ const matrixifyFeed = async (
 ) => {
 	const totalProducts = aliasesFilter(
 		data,
-		language === 'ro' ? ['Rea', 'Toolight'] : aliases
+		language === 'ro'
+			? ['Rea', 'Toolight']
+			: language === 'hu'
+				? ['Rea']
+				: aliases
 	);
 
 	const products = productsChunker(totalProducts, chunks).map((prods) => {
@@ -272,7 +276,7 @@ const matrixifyFeed = async (
 
 			chunk.push({
 				Handle:
-					language === 'ro' || language === 'fr'
+					language === 'ro' || language === 'fr' || language === 'hu'
 						? slugify(
 								titleWithVariantName
 									.split(' ')
@@ -368,7 +372,9 @@ const matrixifyFeed = async (
 				if (index === 0) return;
 				chunk.push({
 					Handle:
-						language === 'ro' || language === 'fr'
+						language === 'ro' ||
+						language === 'fr' ||
+						language === 'hu'
 							? slugify(
 									titleWithVariantName
 										.split(' ')

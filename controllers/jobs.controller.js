@@ -56,12 +56,12 @@ const bar = new cliProgress.SingleBar({
 });
 
 // while (true) {
-// await uploadProducts(bar)
-// 	.then(
-// 		async () =>
-await generateFeeds(bar)
-	.then(async () => await uploadFeeds('../generate/feed', bar))
+await uploadProducts(bar)
+	.then(
+		async () =>
+			await generateFeeds(bar)
+				.then(async () => await uploadFeeds('../generate/feed', bar))
+				.catch((error) => console.log(error))
+	)
 	.catch((error) => console.log(error));
-// )
-// .catch((error) => console.log(error));
 // }

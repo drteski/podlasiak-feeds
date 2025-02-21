@@ -17,8 +17,14 @@ import { generateCeneoFeed } from '../services/feed/ceneo/ceneoFeed.js';
 import { generateJeftinieFeed } from '../services/feed/jeftinie/jeftinieFeed.js';
 import { generateBianoFeed } from '../services/feed/biano/bianoFeed.js';
 import { generateFyndiqFeed } from '../services/feed/fyndq/fyndqFeed.js';
+import { generatePricesCatalogFeed } from '../services/feed/prices/pricesFeed.js';
+import { generateGoogleFeed } from '../services/feed/google/googleFeed.js';
+import { generateBaselinkerFeed } from '../services/feed/baselinker/baselinkerFeed.js';
 
 const feedGenerators = [
+	{ generator: generateGoogleFeed, config: feedsConfig.google },
+	{ generator: generateBaselinkerFeed, config: feedsConfig.baselinker },
+	{ generator: generatePricesCatalogFeed, config: feedsConfig.prices },
 	{ generator: generateCeneoFeed, config: feedsConfig.ceneo },
 	{ generator: generateRozetkaFeed, config: feedsConfig.rozetka },
 	{ generator: generateBazzarFeed, config: feedsConfig.bazzar },

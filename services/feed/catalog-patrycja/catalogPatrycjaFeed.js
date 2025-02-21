@@ -144,7 +144,7 @@ const catalogPatrycjaXmlSchema = (data, root) => {
 			.ele('desc')
 			.dat(`${product.description}`)
 			.up()
-			.ele('images');
+			.ele('imgs');
 
 		const images = () => {
 			return product.images.forEach((img, index) =>

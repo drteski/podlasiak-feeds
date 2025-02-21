@@ -53,6 +53,7 @@ export const processJsonProducts = (fileName, data) => {
 				profileFieldsChoices
 			),
 		});
+		if (product.variants.variant === undefined) return;
 		if (product.variants.variant.length === undefined) {
 			processedProducts.push({
 				aliases: mapAliases(product.aliases, aliases),
