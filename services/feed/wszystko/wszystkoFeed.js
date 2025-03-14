@@ -1,6 +1,7 @@
 import {
 	addMuToPrice,
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
 } from '../../processFeed.js';
@@ -14,9 +15,9 @@ const wszystkoFeed = async (
 		activeProducts = true,
 		activeVariants = true,
 		minStock,
+		options,
 	}
 ) => {
-	// const products = aliasesFilter(data, aliases);
 	const headers = data
 		.sort((a, b) => b.images.length - a.images.length)
 		.map((product) => {
@@ -108,14 +109,6 @@ const wszystkoFeed = async (
 			attributes,
 			images,
 		} = curr;
-
-		// if (activeProducts) {
-		// 	if (!active) return;
-		// }
-		// if (activeVariants) {
-		// 	if (!activeVariant) return;
-		// }
-		// if (stock < minStock) return;
 
 		const storeUrl = getStoreUrl(language, 'Rea');
 

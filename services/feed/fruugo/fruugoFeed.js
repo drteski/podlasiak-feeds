@@ -1,9 +1,12 @@
 import {
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
 	xmlBuilider,
 } from '../../processFeed.js';
+import { imagesUrl } from '../../../utilities/urls.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 
 const fruugoFeed = async (
 	data,
@@ -17,7 +20,7 @@ const fruugoFeed = async (
 		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -49,8 +52,7 @@ const fruugoFeed = async (
 			if (stock < minStock) return;
 
 			if (ean === '' || !ean) return;
-			const storeUrl = getStoreUrl(language, 'Rea');
-			const filteredMedia = images.map((img) => storeUrl + img);
+
 			const specification = attributes[language]
 				.map((attr) => `${attr.name}: ${attr.value}`)
 				.join(' ');
@@ -89,12 +91,12 @@ const fruugoFeed = async (
 				sku,
 				ean,
 				weight,
-				description: description[language],
+				description: getDescription(description, language, producer),
 				specification,
 				price_mpc: calculatePrices(),
 				price_mpc_discount: calculatePrices(),
 				price_vpc: calculatePrices(),
-				images: filteredMedia,
+				images: imagesUrl(images, language, aliases),
 				category: categoryPath,
 			};
 		})
@@ -132,10 +134,10 @@ const fruugoXmlSchema = (data, root) => {
 			.up();
 
 		const mapImages = () => {
-			return product.media.forEach((media, index) => {
+			return product.images.forEach((media, index) => {
 				return itemFront
 					.ele(`Imageurl${index + 1}`)
-					.txt(`${media.url}`)
+					.txt(`${media}`)
 					.up();
 			});
 		};

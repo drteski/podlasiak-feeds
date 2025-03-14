@@ -1,5 +1,6 @@
 import {
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
 	xmlBuilider,
@@ -19,7 +20,7 @@ const baselinkerFeed = async (
 	}
 ) => {
 	const subiektData = await getSubiektProducts().then((data) => data);
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				id,
@@ -120,9 +121,9 @@ const baselinkerXmlSchema = (data, root) => {
 	products.forEach((product) => {
 		const itemFront = offers
 			.ele('product')
-			// .ele('product_id')
-			// .txt(`${product.id}${product.variantId}`)
-			// .up()
+			.ele('product_id')
+			.txt(`${product.id}${product.variantId}`)
+			.up()
 			.ele('name')
 			.txt(`${product.title}`)
 			.up()

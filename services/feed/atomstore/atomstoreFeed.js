@@ -1,11 +1,13 @@
 import {
 	addMuToPrice,
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
-	replaceEntities,
 	saveFeedFileToDisk,
 	titleWithVariantName,
 } from '../../processFeed.js';
+import { getDescription } from '../../../utilities/descriptions.js';
+import { imagesUrl } from '../../../utilities/urls.js';
 
 const atomstoreFeed = async (
 	data,
@@ -16,9 +18,10 @@ const atomstoreFeed = async (
 		activeProducts = true,
 		activeVariants = true,
 		minStock,
+		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -32,11 +35,10 @@ const atomstoreFeed = async (
 				title,
 				description,
 				variantName,
-				sellPrice,
+				basePrice,
 				images,
 			} = product;
 			if (variantId === '') return;
-			const storeUrl = getStoreUrl(language, 'Rea');
 
 			const newTitle = titleWithVariantName(
 				title[language],
@@ -60,15 +62,13 @@ const atomstoreFeed = async (
 				sku,
 				ean,
 				title: newTitle,
-				description: description[language],
+				description: getDescription(description, language, producer),
 				producer,
 				weight,
 				stock,
-				price: addMuToPrice(sellPrice[language].price, mu),
-				vat: sellPrice[language].tax,
-				images: images
-					.map((image) => storeUrl + 'picture/' + image)
-					.join(';'),
+				price: addMuToPrice(basePrice[language].price, mu),
+				vat: basePrice[language].tax,
+				images: imagesUrl(images, language, aliases).join(';'),
 			};
 		})
 		.filter(Boolean)
@@ -90,11 +90,12 @@ const atomstoreUpdateFeed = async (
 		activeProducts = true,
 		activeVariants = true,
 		minStock,
+		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
-			const { sku, ean, stock, sellPrice } = product;
+			const { sku, ean, stock, basePrice } = product;
 
 			if (sku === '') return;
 
@@ -103,8 +104,8 @@ const atomstoreUpdateFeed = async (
 				sku,
 				ean,
 				stock,
-				price: addMuToPrice(sellPrice[language].price, mu),
-				vat: sellPrice[language].tax,
+				price: addMuToPrice(basePrice[language].price, mu),
+				vat: basePrice[language].tax,
 			};
 		})
 		.filter(Boolean)

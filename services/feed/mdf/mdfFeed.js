@@ -1,9 +1,12 @@
 import {
 	addMuToPrice,
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
 } from '../../processFeed.js';
+import { imagesUrl } from '../../../utilities/urls.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 
 const mdfFeed = async (
 	data,
@@ -14,9 +17,10 @@ const mdfFeed = async (
 		activeProducts = true,
 		activeVariants = true,
 		minStock,
+		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -43,7 +47,6 @@ const mdfFeed = async (
 			}
 			if (stock < minStock) return;
 
-			const storeUrl = getStoreUrl('pl', 'Rea');
 			const prices = languages.reduce((previousValue, currentValue) => {
 				return {
 					...previousValue,
@@ -64,10 +67,8 @@ const mdfFeed = async (
 				variantName: variantName['es'],
 				stock,
 				producer,
-				description: description['es'],
-				images: images
-					.map((image) => storeUrl + 'picture/' + image)
-					.join(';'),
+				description: getDescription(description, 'es', producer),
+				images: imagesUrl(images, 'pl', aliases, 'default').join(';'),
 				...prices,
 			};
 		})

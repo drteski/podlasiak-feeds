@@ -46,6 +46,59 @@ export const mapSimpleData = (data) => {
 		}, {});
 	}
 };
+
+export const mapDescriptions = (data, allAliases) => {
+	const descriptions = (rawData, description) => {
+		if (rawData.length !== 0) {
+			if (rawData.length === undefined) {
+				return [`${rawData.$}`];
+			} else {
+				return rawData.map((desc) => {
+					if (description === '') return '';
+					return `${desc.$}`;
+				})[0];
+			}
+		}
+		return '';
+	};
+	const aliases = (configData, lang) => {
+		return ['Rea', 'Tutumi', 'Toolight'].reduce((prev, curr) => {
+			if (data.length !== 0) {
+				const filteredDescriptions = data.description.filter((desc) => {
+					return (
+						mapAliases(desc.$alias, allAliases)[0] === curr &&
+						lang === desc.$lang
+					);
+				});
+				return {
+					...prev,
+					[`${curr}`]: descriptions(filteredDescriptions, curr),
+				};
+			} else {
+				return {
+					...prev,
+					[`${curr}`]: '',
+				};
+			}
+		}, {});
+	};
+	if (data.length !== undefined) {
+		return newConfig.reduce((prev, curr) => {
+			return {
+				...prev,
+				[`${curr.code}`]: aliases(newConfig, curr.code),
+			};
+		}, {});
+	} else {
+		return newConfig.reduce((prev, curr) => {
+			return {
+				...prev,
+				[`${curr.code}`]: aliases(newConfig, curr.code),
+			};
+		}, {});
+	}
+};
+
 export const mapAliases = (productAliases, allAliases) => {
 	if (productAliases.length === 0) return [];
 	return productAliases

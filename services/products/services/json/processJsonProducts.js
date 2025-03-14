@@ -9,6 +9,7 @@ import {
 	mapProfilesValues,
 	mapProducers,
 	mapProfiles,
+	mapDescriptions,
 } from './valuesMapping.js';
 
 export const processJsonProducts = (fileName, data) => {
@@ -41,7 +42,7 @@ export const processJsonProducts = (fileName, data) => {
 			url: mapUrls(product.urls, aliases),
 			stock: 0,
 			producer: mapProducers(product.$producer, producers),
-			description: mapSimpleData(product.descriptions.description),
+			description: mapDescriptions(product.descriptions, aliases),
 			categories: mapCategories(product.categories, categories),
 			images: mapImages(product.images),
 			price: mapPrices(product.basePrice),
@@ -74,7 +75,7 @@ export const processJsonProducts = (fileName, data) => {
 					product.variants.variant.stockTotal.stock[0].$quantity
 				),
 				producer: mapProducers(product.$producer, producers),
-				description: mapSimpleData(product.descriptions.description),
+				description: mapDescriptions(product.descriptions, aliases),
 				categories: mapCategories(product.categories, categories),
 				images: mapImages(product.images),
 				price: mapPrices(product.variants.variant.basePrice),

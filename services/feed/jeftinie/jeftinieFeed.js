@@ -1,9 +1,11 @@
 import {
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
 	xmlBuilider,
 } from '../../processFeed.js';
+import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 
 const jeftinieFeed = async (
 	data,
@@ -17,7 +19,7 @@ const jeftinieFeed = async (
 		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -46,10 +48,6 @@ const jeftinieFeed = async (
 			}
 			if (stock < minStock) return;
 
-			const storeUrl = getStoreUrl(language, 'Rea');
-			const filteredMedia = images.map(
-				(img) => storeUrl + 'picture/' + img
-			);
 			const specification = attributes[language]
 				.map(
 					(attribute) =>
@@ -70,14 +68,14 @@ const jeftinieFeed = async (
 				id: variantId,
 				name: title[language],
 				description: description[language],
-				link: storeUrl + url[language]['Rea'],
+				link: productUrl(url, language, aliases),
 				producer,
 				quantity: stock,
 				fileUnder: categoryPath[categoryPath.length - 1],
 				stock: stock > 0 ? 'in stock' : 'out of stock',
 				ean: !ean ? '' : ean,
 				price: sellPrice[language].price,
-				images: filteredMedia,
+				images: imagesUrl(images, language, aliases),
 				productCode: sku,
 				specification,
 				attributes: attributes[language].map((attribute) => ({

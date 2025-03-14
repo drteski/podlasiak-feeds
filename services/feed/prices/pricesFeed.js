@@ -1,17 +1,22 @@
 import {
-	addMuToPrice,
 	aliasesFilter,
-	getStoreUrl,
+	excludedFilter,
 	saveFeedFileToDisk,
-	titleWithVariantName,
 } from '../../processFeed.js';
 
 const pricesCatalogFeed = async (
 	data,
 	languages,
-	{ aliases = ['Rea', 'Tutumi', 'Toolight'] }
+	{
+		mu = 0,
+		aliases = ['Rea', 'Tutumi', 'Toolight'],
+		activeProducts = true,
+		activeVariants = true,
+		minStock,
+		options,
+	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,

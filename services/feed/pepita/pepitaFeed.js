@@ -2,10 +2,13 @@ import dotenv from 'dotenv';
 import {
 	addMuToPrice,
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
 	xmlBuilider,
 } from '../../processFeed.js';
+import { imagesUrl, productUrl } from '../../../utilities/urls.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 
 dotenv.config({ path: '../.env' });
 
@@ -18,9 +21,10 @@ const pepitaFeed = async (
 		activeProducts = true,
 		activeVariants = true,
 		minStock,
+		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -30,6 +34,7 @@ const pepitaFeed = async (
 				description,
 				sku,
 				stock,
+				producer,
 				ean,
 				attributes,
 				url,
@@ -48,7 +53,6 @@ const pepitaFeed = async (
 
 			if (stock < minStock) return;
 
-			const storeUrl = getStoreUrl(language, 'Rea');
 			if (ean === '' || !ean) return;
 
 			return {
@@ -56,7 +60,7 @@ const pepitaFeed = async (
 				sku,
 				ean,
 				title: title[language],
-				description: description[language],
+				description: getDescription(description, language, producer),
 				price: addMuToPrice(sellPrice[language].price, mu),
 				currency: sellPrice[language].currency,
 				category:
@@ -68,11 +72,13 @@ const pepitaFeed = async (
 									category[language].length - 1
 								].length - 1
 							].name,
-				images: images.map((img, index) => ({
-					url: storeUrl + 'picture/' + img,
-					main: index === 0,
-				})),
-				url: storeUrl + url[language]['Rea'],
+				images: imagesUrl(images, language, aliases).map(
+					(img, index) => ({
+						url: img,
+						main: index === 0,
+					})
+				),
+				url: productUrl(url, language, aliases),
 				stock,
 				attributes:
 					attributes[language].length === undefined

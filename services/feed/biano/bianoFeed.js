@@ -2,8 +2,11 @@ import {
 	aliasesFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
+	excludedFilter,
 	xmlBuilider,
 } from '../../processFeed.js';
+import { imagesUrl, productUrl } from '../../../utilities/urls.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 
 const bianoFeed = async (
 	data,
@@ -17,7 +20,7 @@ const bianoFeed = async (
 		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -57,8 +60,6 @@ const bianoFeed = async (
 				})
 				.filter(Boolean);
 
-			const storeUrl = getStoreUrl(language, 'Rea');
-
 			let deliveryTime;
 			switch (language) {
 				case 'de':
@@ -84,13 +85,15 @@ const bianoFeed = async (
 			return {
 				variantId,
 				title: title[language],
-				description: description[language],
+				description: getDescription(description, language, producer),
 				brand: producer,
-				url:
-					storeUrl +
-					url[language]['Rea'] +
-					'?utm_source=idealo&utm_medium=cpc',
-				media: images.map((img) => storeUrl + 'picture/' + img),
+				url: productUrl(
+					url,
+					language,
+					aliases,
+					'?utm_source=idealo&utm_medium=cpc'
+				),
+				media: imagesUrl(images, language, aliases),
 				deliveryTime,
 				attributes: filteredAttributes,
 				price: sellPrice[language].price,

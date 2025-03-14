@@ -82,6 +82,13 @@ export const aliasesFilter = (products, aliases) => {
 		product.aliases.some((alias) => aliases.includes(alias))
 	);
 };
+
+export const excludedFilter = (products, options) => {
+	// console.log(options?.exclude);
+	if (options?.exclude === undefined) return products;
+	return products.filter((product) => !options.exclude.includes(product.sku));
+};
+
 export const xmlBuilider = async (data, cb) => {
 	const { products, language } = data;
 	const root = builder;

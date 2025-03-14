@@ -31,6 +31,27 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/generate/feed/galaxus_media_de.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/feed/galaxus_price_de.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/feed/galaxus_products_de.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/generate/feed/matrixify_de_1.csv">
           <value>
             <Attribute>
@@ -38,7 +59,35 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/generate/feed/matrixify_de_2.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/generate/feed/matrixify_fr_1.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/feed/matrixify_hu_1.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/feed/matrixify_old_pl_1.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/feed/matrixify_old_pl_2.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -101,6 +150,20 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/generate/feed/matrixify_update_hu_1.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/feed/matrixify_update_hu_4.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/generate/feed/matrixify_update_old_de_1.csv">
           <value>
             <Attribute>
@@ -122,7 +185,28 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/generate/feed/matrixify_update_old_de_4.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/feed/matrixify_update_pl_1.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/generate/feed/matrixify_update_pl_2.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/feed/matrixify_update_pl_4.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -164,6 +248,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/generate/feed/mdf_de_fr_it_ie_es_pt.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/generate/merce/prices.csv">
           <value>
             <Attribute>
@@ -189,6 +280,41 @@
           <value>
             <Attribute>
               <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/updatePrices/02-12-2024/Ukraina/1_variant_ukraina_02-12-2024_13-48-56.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/updatePrices/02-12-2024/Ukraina/2_product_ukraina_02-12-2024_13-48-56.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/updatePrices/22-11-2024/Ukraina/2_product_22-11-2024_10-37-17.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/updatePrices/25-11-2024/Ukraina/2_product_25-11-2024_10-44-44.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/generate/updatePrices/26-11-2024/Ukraina/2_product_26-11-2024_14-20-30.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
             </Attribute>
           </value>
         </entry>

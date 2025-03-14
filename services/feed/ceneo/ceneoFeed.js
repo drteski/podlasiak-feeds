@@ -1,10 +1,12 @@
 import {
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
 	xmlBuilider,
 } from '../../processFeed.js';
 import { getFinalCategory } from '../../../utilities/category.js';
+import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 
 const ceneoFeed = async (
 	data,
@@ -18,7 +20,7 @@ const ceneoFeed = async (
 		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -46,10 +48,6 @@ const ceneoFeed = async (
 				if (!activeVariant) return;
 			}
 
-			const storeUrl = getStoreUrl(language, 'Rea');
-			const filteredMedia = images.map(
-				(img) => storeUrl + 'picture/' + img
-			);
 			const attributeArray =
 				attributes[language].length === undefined
 					? [attributes[language]]
@@ -92,9 +90,9 @@ const ceneoFeed = async (
 					{ name: 'Kod producenta', value: sku },
 					...specification,
 				],
-				url: storeUrl + url[language]['Rea'],
+				url: productUrl(url, language, aliases),
 				price: sellPrice[language].price,
-				images: filteredMedia,
+				images: imagesUrl(images, language, aliases),
 				category: getFinalCategory(category[language], true),
 			};
 		})
@@ -174,7 +172,12 @@ const ceneoXmlSchema = (data, root) => {
 		};
 
 		images();
-		const end = start.up().ele('attrs');
+		const end = start
+			.up()
+			.ele('attrs')
+			.ele('a', { name: 'Producent odpowiedzialny' })
+			.dat('Podlasiak Andrzej Cylwik Spółka Komandytowa')
+			.up();
 		const attributes = () => {
 			return product.specification.forEach((attribute) => {
 				if (attribute.value === undefined || attribute.value === '')

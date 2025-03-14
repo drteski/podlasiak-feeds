@@ -20,32 +20,36 @@ import { generateFyndiqFeed } from '../services/feed/fyndq/fyndqFeed.js';
 import { generatePricesCatalogFeed } from '../services/feed/prices/pricesFeed.js';
 import { generateGoogleFeed } from '../services/feed/google/googleFeed.js';
 import { generateBaselinkerFeed } from '../services/feed/baselinker/baselinkerFeed.js';
+import { generateAllPricesFeed } from '../services/feed/allPrices/allPricesFeed.js';
+import { generateFruugoFeed } from '../services/feed/fruugo/fruugoFeed.js';
 
 const feedGenerators = [
-	{ generator: generateGoogleFeed, config: feedsConfig.google },
-	{ generator: generateBaselinkerFeed, config: feedsConfig.baselinker },
-	{ generator: generatePricesCatalogFeed, config: feedsConfig.prices },
-	{ generator: generateCeneoFeed, config: feedsConfig.ceneo },
-	{ generator: generateRozetkaFeed, config: feedsConfig.rozetka },
-	{ generator: generateBazzarFeed, config: feedsConfig.bazzar },
-	{ generator: generatePepitaFeed, config: feedsConfig.pepita },
-	{ generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
-	{ generator: generateMdfFeed, config: feedsConfig.mdf },
-	{ generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
 	{ generator: generateGalaxusFeed, config: feedsConfig.galaxus },
-	{ generator: generateSkroutzFeed, config: feedsConfig.skroutz },
+	{ generator: generateRozetkaFeed, config: feedsConfig.rozetka },
+	// { generator: generateAllPricesFeed, config: feedsConfig.allPrices },
+	// { generator: generateGoogleFeed, config: feedsConfig.google },
+	// { generator: generateBaselinkerFeed, config: feedsConfig.baselinker },
+	// { generator: generatePricesCatalogFeed, config: feedsConfig.prices },
+	// { generator: generateCeneoFeed, config: feedsConfig.ceneo },
+	// { generator: generateBazzarFeed, config: feedsConfig.bazzar },
+	// { generator: generatePepitaFeed, config: feedsConfig.pepita },
+	// { generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
+	// { generator: generateMdfFeed, config: feedsConfig.mdf },
+	// { generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
+	// { generator: generateSkroutzFeed, config: feedsConfig.skroutz },
+	// {
+	// 	generator: generateCatalogPatrycjaFeed,
+	// 	config: feedsConfig.catalogPatrycja,
+	// },
+	// { generator: generateFyndiqFeed, config: feedsConfig.fyndiq },
+	// { generator: generateBianoFeed, config: feedsConfig.biano },
+	// { generator: generateJeftinieFeed, config: feedsConfig.jeftinie },
+	// { generator: generateWszystkoFeed, config: feedsConfig.wszystko },
+	// { generator: generateFruugoFeed, config: feedsConfig.fruugo },
 	// {
 	// 	generator: generateToolightCatalogFeed,
 	// 	config: feedsConfig.toolightCatalog,
 	// },
-	{
-		generator: generateCatalogPatrycjaFeed,
-		config: feedsConfig.catalogPatrycja,
-	},
-	{ generator: generateFyndiqFeed, config: feedsConfig.fyndiq },
-	{ generator: generateBianoFeed, config: feedsConfig.biano },
-	{ generator: generateJeftinieFeed, config: feedsConfig.jeftinie },
-	{ generator: generateWszystkoFeed, config: feedsConfig.wszystko },
 ];
 export const generateFeeds = async (bar) => {
 	return new Promise(async (resolve, reject) => {

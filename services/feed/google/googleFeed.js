@@ -2,9 +2,11 @@ import {
 	aliasesFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
+	excludedFilter,
 	xmlBuilider,
 } from '../../processFeed.js';
 import { format, formatISO } from 'date-fns';
+import { imagesUrl } from '../../../utilities/urls.js';
 const googleFeed = async (
 	data,
 	language,
@@ -17,16 +19,18 @@ const googleFeed = async (
 		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				id,
 				active,
 				variantId,
+				activeVariant,
 				sku,
 				ean,
 				stock,
 				producer,
+				weight,
 				category,
 				title,
 				description,
@@ -37,6 +41,9 @@ const googleFeed = async (
 			} = product;
 			if (variantId === '') return;
 			if (sku === '') return;
+			if (weight >= 30) return;
+			if (!active) return;
+			if (!activeVariants) return;
 
 			const storeUrl = getStoreUrl(language, 'Rea');
 			const categoryPath =
@@ -46,7 +53,7 @@ const googleFeed = async (
 								.length !== undefined
 						? category[language][category[language].length - 1]
 								.map((cat) => cat.name)
-								.join(', ')
+								.join(' > ')
 						: category[language][category[language].length - 1]
 								.name;
 			return {
@@ -59,7 +66,7 @@ const googleFeed = async (
 				url: storeUrl + url[language]['Rea'],
 				stock,
 				category: categoryPath,
-				images: images.map((img) => storeUrl + 'picture/' + img),
+				images: imagesUrl(images, language, aliases),
 				price: sellPrice[language].price,
 				basePrice: basePrice[language].price,
 			};
@@ -73,12 +80,11 @@ const googleFeed = async (
 const googleXmlSchema = (data, root) => {
 	const products = data;
 	const rootElement = root
-		.create({ version: '1.0' })
-		.ele('rss', {
+		.create({ version: '1.0', encoding: 'UTF-8' })
+		.ele('feed', {
 			'xmlns:g': 'http://base.google.com/ns/1.0',
-			version: '2.0',
+			xmlns: 'http://www.w3.org/2005/Atom',
 		})
-		.ele('channel')
 		.ele('title')
 		.dat('rea.ua')
 		.up()
@@ -92,54 +98,76 @@ const googleXmlSchema = (data, root) => {
 		.dat(formatISO(Date.now()))
 		.up();
 
-	const offers = rootElement.ele('items');
+	const offers = rootElement;
 	products.forEach((product) => {
 		const itemFront = offers
-			.ele('item')
+			.ele('entry')
 			.ele('g:title')
 			.dat(`${product.title}`)
 			.up()
 			.ele('g:link')
-			.txt(`${product.url}`)
+			.dat(`${product.url}`)
 			.up()
 			.ele('g:description')
-			.txt(`${product.description}`)
+			.dat(`${product.description}`)
 			.up()
 			.ele('g:id')
 			.txt(`${product.id}`)
 			.up()
 			.ele('g:condition')
-			.txt(`new`)
+			.dat(`new`)
 			.up()
 			.ele('g:sale_price')
-			.txt(`${product.price}`)
+			.dat(`${product.price} UAH`)
 			.up()
 			.ele('g:price')
-			.txt(`${product.basePrice}`)
+			.dat(`${product.basePrice} UAH`)
 			.up()
 			.ele('g:availability')
-			.txt(`${product.stock > 0 ? 'in stock' : 'out of stock'}`)
+			.dat(`${product.stock > 0 ? 'in stock' : 'out of stock'}`)
 			.up()
 			.ele('g:product_type')
-			.txt(`${product.category}`)
+			.dat(`${product.category}`)
 			.up()
 			.ele('g:gtin')
-			.txt(`${product.ean}`)
+			.dat(`${product.ean}`)
 			.up()
 			.ele('g:mpn')
-			.txt(`${product.sku}`)
+			.dat(`${product.sku}`)
 			.up()
 			.ele('g:is_bundle')
-			.txt(`no`)
+			.dat(`no`)
 			.up()
 			.ele('g:brand')
-			.txt(`${product.brand}`)
+			.dat(`${product.brand}`)
 			.up()
 			.ele('g:image_link')
-			.txt(`${product.images[0]}`)
+			.dat(`${product.images[0]}`)
 			.up()
 			.ele('g:additional_image_link')
-			.txt(product.images.slice(1, product.images.length - 1).join(','))
+			.dat(product.images.slice(1, product.images.length - 1).join(','))
+			.up()
+			.ele('g:shipping')
+			.ele('g:country')
+			.dat('UA')
+			.up()
+			.ele('g:service')
+			.dat('Meest - Кредитна карта')
+			.up()
+			.ele('g:price')
+			.dat('0 UAH')
+			.up()
+			.up()
+			.ele('g:shipping')
+			.ele('g:country')
+			.dat('UA')
+			.up()
+			.ele('g:service')
+			.dat('Meest - Наложеним платежем')
+			.up()
+			.ele('g:price')
+			.dat('0 UAH')
+			.up()
 			.up();
 	});
 	return rootElement;

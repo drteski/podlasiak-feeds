@@ -1,9 +1,12 @@
 import {
 	aliasesFilter,
 	getStoreUrl,
+	excludedFilter,
 	saveFeedFileToDisk,
 	xmlBuilider,
 } from '../../processFeed.js';
+import { getDescription } from '../../../utilities/descriptions.js';
+import { imagesUrl } from '../../../utilities/urls.js';
 
 const bazzarFeed = async (
 	data,
@@ -17,7 +20,7 @@ const bazzarFeed = async (
 		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -49,10 +52,7 @@ const bazzarFeed = async (
 			if (stock < minStock) return;
 
 			if (ean === '' || !ean) return;
-			const storeUrl = getStoreUrl(language, 'Rea');
-			const filteredMedia = images.map(
-				(img) => storeUrl + 'picture/' + img
-			);
+
 			const specification = attributes[language]
 				.map((attr) => `${attr.name}: ${attr.value}`)
 				.join(' ');
@@ -91,12 +91,12 @@ const bazzarFeed = async (
 				sku,
 				ean,
 				weight,
-				description: description[language],
+				description: getDescription(description, language, producer),
 				specification,
 				price_mpc: calculatePrices(),
 				price_mpc_discount: calculatePrices(),
 				price_vpc: calculatePrices(),
-				images: filteredMedia,
+				images: imagesUrl(images, language, aliases),
 				category: categoryPath,
 			};
 		})

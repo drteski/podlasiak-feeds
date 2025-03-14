@@ -1,10 +1,13 @@
 import {
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
 	xmlBuilider,
 } from '../../processFeed.js';
 import { getFinalCategory } from '../../../utilities/category.js';
+import { getDescription } from '../../../utilities/descriptions.js';
+import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 
 const catalogPatrycjaFeed = async (
 	data,
@@ -18,7 +21,7 @@ const catalogPatrycjaFeed = async (
 		options,
 	}
 ) => {
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				id,
@@ -51,10 +54,6 @@ const catalogPatrycjaFeed = async (
 				if (!activeVariant) return;
 			}
 
-			const storeUrl = getStoreUrl(language, 'Rea');
-			const filteredMedia = images.map(
-				(img) => storeUrl + 'picture/' + img
-			);
 			const attributeArray =
 				attributes[language].length === undefined
 					? [attributes[language]]
@@ -91,17 +90,20 @@ const catalogPatrycjaFeed = async (
 				title: titleWithVariantName,
 				stock,
 				weight,
-				description: description[language],
+				description: getDescription(description, language, producer),
 				specification: [
 					{ name: 'Producent', value: producer },
 					{ name: 'EAN', value: ean },
 					{ name: 'Kod producenta', value: sku },
 					...specification,
 				],
-				url: storeUrl + url[language]['Rea'],
-				sellPrice: sellPrice[language].price,
+				url: productUrl(url, language, aliases),
+				sellPrice:
+					sellPrice[language].price === basePrice[language].price
+						? sellPrice[language].price
+						: '',
 				basePrice: basePrice[language].price,
-				images: filteredMedia,
+				images: imagesUrl(images, language, aliases),
 				category: getFinalCategory(category[language], true),
 			};
 		})

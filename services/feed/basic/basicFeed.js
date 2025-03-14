@@ -14,6 +14,7 @@ const basicFeed = async (
 		activeProducts = true,
 		activeVariants = true,
 		minStock,
+		options,
 	}
 ) => {
 	const products = data

@@ -8,6 +8,8 @@ import {
 } from '../../processFeed.js';
 
 import slugify from 'slugify';
+import { getSubiektProducts } from '../subiekt/subiektFeed.js';
+import { imagesUrl } from '../../../utilities/urls.js';
 
 dotenv.config({ path: '../.env' });
 
@@ -160,6 +162,8 @@ const excluded = [
 	49544, 49538, 49537, 49536, 49535, 49534, 49533, 49532, 49530, 49529, 49446,
 	49523, 49520, 49519, 49518, 49517, 49516, 49514, 53872, 49709,
 ];
+
+const subiektProducts = await getSubiektProducts().then((data) => data);
 const matrixifyFeed = async (
 	data,
 	language,
@@ -214,7 +218,6 @@ const matrixifyFeed = async (
 					return;
 			}
 
-			const storeUrl = getStoreUrl(language, 'Rea');
 			if (language !== 'ro') {
 				if (producer !== 'Rea') return;
 			}
@@ -321,7 +324,7 @@ const matrixifyFeed = async (
 				'Variant Taxable': 'TRUE',
 				'Variant Barcode': ean,
 				'Variant Weight Unit': 'kg',
-				'Image Src': storeUrl + 'picture/fit-in/2000x2000/' + images[0],
+				'Image Src': imagesUrl(images, language, aliases, 'default')[0],
 				'Image Command': 'MERGE',
 				'Image Position': 1,
 				'Image Alt Text': titleWithVariantName + ' 1',
@@ -360,68 +363,73 @@ const matrixifyFeed = async (
 								.filter(Boolean)
 								.join('')}</ul>`,
 				'Metafield: custom.second_image [single_line_text_field]':
-					images[1] === undefined
+					imagesUrl(images, language, aliases, 'default')[1] ===
+					undefined
 						? ''
-						: `<img style="height: 360px; width: auto; object-fit: contain; object-position: center;" src="${storeUrl}picture/fit-in/2000x2000/${images[1]}" alt="">`,
+						: `<img style="height: 360px; width: auto; object-fit: contain; object-position: center;" src="${imagesUrl(images, language, aliases, 'default')[1]}" alt="">`,
 				'Metafield: custom.third_image [single_line_text_field]':
-					images[2] === undefined
+					imagesUrl(images, language, aliases, 'default')[2] ===
+					undefined
 						? ''
-						: `<img style="height: 360px; width: auto; object-fit: contain; object-position: center;" src="${storeUrl}picture/fit-in/2000x2000/${images[2]} " alt="">`,
+						: `<img style="height: 360px; width: auto; object-fit: contain; object-position: center;" src="${imagesUrl(images, language, aliases, 'default')[2]} " alt="">`,
 			});
-			images.forEach((image, index) => {
-				if (index === 0) return;
-				chunk.push({
-					Handle:
-						language === 'ro' ||
-						language === 'fr' ||
-						language === 'hu'
-							? slugify(
-									titleWithVariantName
-										.split(' ')
-										.filter((item) => item !== '')
-										.map(
-											(item) =>
-												item[0].toUpperCase() +
-												item.slice(1, item.length)
-										)
-										.join(' ')
-										.toLowerCase()
-								)
-							: sku,
-					Command: '',
-					Status: '',
-					Vendor: '',
-					Title: '',
-					Type: '',
-					Tags: '',
-					'Option1 Name': '',
-					'Option1 Value': '',
-					'Variant SKU': '',
-					'Variant Grams': '',
-					'Variant Inventory Tracker': '',
-					'Variant Inventory Qty': '',
-					'Variant Inventory Policy': '',
-					'Variant Fulfillment Service': '',
-					'Variant Price': '',
-					'Variant Compare At Price': '',
-					'Variant Requires Shipping': '',
-					'Variant Taxable': '',
-					'Variant Barcode': '',
-					'Variant Weight Unit': '',
-					'Image Src': storeUrl + 'picture/fit-in/2000x2000/' + image,
-					'Image Command': 'MERGE',
-					'Image Position': index + 1,
-					'Image Alt Text': titleWithVariantName + ' ' + (index + 1),
-					'SEO Title': '',
-					'SEO Description': '',
-					'Metafield: custom.product_details [single_line_text_field]':
-						'',
-					'Metafield: custom.second_image [single_line_text_field]':
-						'',
-					'Metafield: custom.third_image [single_line_text_field]':
-						'',
-				});
-			});
+			imagesUrl(images, language, aliases, 'default').forEach(
+				(image, index) => {
+					if (index === 0) return;
+					chunk.push({
+						Handle:
+							language === 'ro' ||
+							language === 'fr' ||
+							language === 'hu'
+								? slugify(
+										titleWithVariantName
+											.split(' ')
+											.filter((item) => item !== '')
+											.map(
+												(item) =>
+													item[0].toUpperCase() +
+													item.slice(1, item.length)
+											)
+											.join(' ')
+											.toLowerCase()
+									)
+								: sku,
+						Command: '',
+						Status: '',
+						Vendor: '',
+						Title: '',
+						Type: '',
+						Tags: '',
+						'Option1 Name': '',
+						'Option1 Value': '',
+						'Variant SKU': '',
+						'Variant Grams': '',
+						'Variant Inventory Tracker': '',
+						'Variant Inventory Qty': '',
+						'Variant Inventory Policy': '',
+						'Variant Fulfillment Service': '',
+						'Variant Price': '',
+						'Variant Compare At Price': '',
+						'Variant Requires Shipping': '',
+						'Variant Taxable': '',
+						'Variant Barcode': '',
+						'Variant Weight Unit': '',
+						'Image Src': image,
+						'Image Command': 'MERGE',
+						'Image Position': index + 1,
+						'Image Alt Text':
+							titleWithVariantName + ' ' + (index + 1),
+						'SEO Title': '',
+						'SEO Description': '',
+						'Metafield: custom.product_details [single_line_text_field]':
+							'',
+						'Metafield: custom.second_image [single_line_text_field]':
+							'',
+						'Metafield: custom.third_image [single_line_text_field]':
+							'',
+					});
+				}
+			);
 		});
 		return chunk;
 	});
@@ -480,7 +488,6 @@ const matrixifyFeedOld = async (
 					return;
 			}
 
-			const storeUrl = getStoreUrl(language, 'Rea');
 			if (language !== 'ro') {
 				if (producer !== 'Rea') return;
 			}
@@ -573,7 +580,7 @@ const matrixifyFeedOld = async (
 				'Variant Taxable': 'TRUE',
 				'Variant Barcode': ean,
 				'Variant Weight Unit': 'kg',
-				'Image Src': storeUrl + 'picture/fit-in/2000x2000/' + images[0],
+				'Image Src': imagesUrl(images, language, aliases, 'default')[0],
 				'Image Command': 'MERGE',
 				'Image Position': 1,
 				'Image Alt Text': titleWithVariantName + ' 1',
@@ -612,52 +619,57 @@ const matrixifyFeedOld = async (
 								.filter(Boolean)
 								.join('')}</ul>`,
 				'Metafield: custom.second_image [single_line_text_field]':
-					images[1] === undefined
+					imagesUrl(images, language, aliases, 'default')[1] ===
+					undefined
 						? ''
-						: `<img style="height: 360px; width: auto; object-fit: contain; object-position: center;" src="${storeUrl}picture/fit-in/2000x2000/${images[1]}" alt="">`,
+						: `<img style="height: 360px; width: auto; object-fit: contain; object-position: center;" src="${imagesUrl(images, language, aliases, 'default')[1]}" alt="">`,
 				'Metafield: custom.third_image [single_line_text_field]':
-					images[2] === undefined
+					imagesUrl(images, language, aliases, 'default')[2] ===
+					undefined
 						? ''
-						: `<img style="height: 360px; width: auto; object-fit: contain; object-position: center;" src="${storeUrl}picture/fit-in/2000x2000/${images[2]} " alt="">`,
+						: `<img style="height: 360px; width: auto; object-fit: contain; object-position: center;" src="${imagesUrl(images, language, aliases, 'default')[2]} " alt="">`,
 			});
-			images.forEach((image, index) => {
-				if (index === 0) return;
-				chunk.push({
-					Handle: variantId,
-					Command: '',
-					Status: '',
-					Vendor: '',
-					Title: '',
-					Type: '',
-					Tags: '',
-					'Option1 Name': '',
-					'Option1 Value': '',
-					'Variant SKU': '',
-					'Variant Grams': '',
-					'Variant Inventory Tracker': '',
-					'Variant Inventory Qty': '',
-					'Variant Inventory Policy': '',
-					'Variant Fulfillment Service': '',
-					'Variant Price': '',
-					'Variant Compare At Price': '',
-					'Variant Requires Shipping': '',
-					'Variant Taxable': '',
-					'Variant Barcode': '',
-					'Variant Weight Unit': '',
-					'Image Src': storeUrl + 'picture/fit-in/2000x2000/' + image,
-					'Image Command': 'MERGE',
-					'Image Position': index + 1,
-					'Image Alt Text': titleWithVariantName + ' ' + (index + 1),
-					'SEO Title': '',
-					'SEO Description': '',
-					'Metafield: custom.product_details [single_line_text_field]':
-						'',
-					'Metafield: custom.second_image [single_line_text_field]':
-						'',
-					'Metafield: custom.third_image [single_line_text_field]':
-						'',
-				});
-			});
+			imagesUrl(images, language, aliases, 'default').forEach(
+				(image, index) => {
+					if (index === 0) return;
+					chunk.push({
+						Handle: variantId,
+						Command: '',
+						Status: '',
+						Vendor: '',
+						Title: '',
+						Type: '',
+						Tags: '',
+						'Option1 Name': '',
+						'Option1 Value': '',
+						'Variant SKU': '',
+						'Variant Grams': '',
+						'Variant Inventory Tracker': '',
+						'Variant Inventory Qty': '',
+						'Variant Inventory Policy': '',
+						'Variant Fulfillment Service': '',
+						'Variant Price': '',
+						'Variant Compare At Price': '',
+						'Variant Requires Shipping': '',
+						'Variant Taxable': '',
+						'Variant Barcode': '',
+						'Variant Weight Unit': '',
+						'Image Src': image,
+						'Image Command': 'MERGE',
+						'Image Position': index + 1,
+						'Image Alt Text':
+							titleWithVariantName + ' ' + (index + 1),
+						'SEO Title': '',
+						'SEO Description': '',
+						'Metafield: custom.product_details [single_line_text_field]':
+							'',
+						'Metafield: custom.second_image [single_line_text_field]':
+							'',
+						'Metafield: custom.third_image [single_line_text_field]':
+							'',
+					});
+				}
+			);
 		});
 		return chunk;
 	});
@@ -683,6 +695,18 @@ const matrixifyFeedStockUpdate = async (
 			}
 			if (sku === '') return;
 
+			const subiektProduct = subiektProducts.filter(
+				(sub) => sub.SKU.toLowerCase() === sku.toLowerCase()
+			);
+
+			const correctStock = () => {
+				if (subiektProduct.length === 0)
+					return stock < minStock ? 0 : stock;
+				return parseInt(subiektProduct[0]['Dostępne']) < minStock
+					? 0
+					: parseInt(subiektProduct[0]['Dostępne']);
+			};
+
 			const titleWithVariantName =
 				title[language] +
 				' ' +
@@ -701,27 +725,27 @@ const matrixifyFeedStockUpdate = async (
 					.replace('---', '');
 
 			chunk.push({
-				Handle:
-					language === 'ro' || language === 'fr'
-						? slugify(
-								titleWithVariantName
-									.split(' ')
-									.filter((item) => item !== '')
-									.map(
-										(item) =>
-											item[0].toUpperCase() +
-											item.slice(1, item.length)
-									)
-									.join(' ')
-									.toLowerCase()
-							)
-						: sku,
+				// Handle:
+				// 	language === 'ro' || language === 'fr'
+				// 		? slugify(
+				// 				titleWithVariantName
+				// 					.split(' ')
+				// 					.filter((item) => item !== '')
+				// 					.map(
+				// 						(item) =>
+				// 							item[0].toUpperCase() +
+				// 							item.slice(1, item.length)
+				// 					)
+				// 					.join(' ')
+				// 					.toLowerCase()
+				// 			)
+				// 		: sku,
 				'Variant SKU': sku,
 				Command: 'UPDATE',
 				Status: 'Active',
 				Published: 'TRUE',
 				'Published Scope': 'global',
-				'Variant Inventory Qty': stock < minStock ? 0 : stock,
+				'Variant Inventory Qty': correctStock(),
 				'Variant Price':
 					addMuToPrice(sellPrice[language].price, mu) * 0.95,
 				'Variant Compare At Price':
@@ -750,14 +774,26 @@ const matrixifyFeedStockUpdateOld = async (
 					return;
 			}
 			if (sku === '') return;
+
+			const subiektProduct = subiektProducts.filter(
+				(sub) => sub.SKU.toLowerCase() === sku.toLowerCase()
+			);
+
+			const correctStock = () => {
+				if (subiektProduct.length === 0)
+					return stock < minStock ? 0 : stock;
+				return parseInt(subiektProduct[0]['Dostępne']) < minStock
+					? 0
+					: parseInt(subiektProduct[0]['Dostępne']);
+			};
 			chunk.push({
-				Handle: variantId,
+				// Handle: variantId,
 				'Variant SKU': sku,
 				Command: 'UPDATE',
 				Status: 'Active',
 				Published: 'TRUE',
 				'Published Scope': 'global',
-				'Variant Inventory Qty': stock < minStock ? 0 : stock,
+				'Variant Inventory Qty': correctStock(),
 				'Variant Price':
 					addMuToPrice(sellPrice[language].price, mu) * 0.95,
 				'Variant Compare At Price':

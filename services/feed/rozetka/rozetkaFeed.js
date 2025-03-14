@@ -1,8 +1,6 @@
-import { format } from 'date-fns';
 import {
 	aliasesFilter,
-	getCurrencyRates,
-	getStoreUrl,
+	excludedFilter,
 	saveFeedFileToDisk,
 	xmlBuilider,
 } from '../../processFeed.js';
@@ -10,7 +8,21 @@ import {
 	connectToGoogleSheets,
 	getDataFromSheets,
 } from '../../../utilities/googleSheets.js';
+import { imagesUrl, productUrl } from '../../../utilities/urls.js';
+import { format } from 'date-fns';
+import { getDescription } from '../../../utilities/descriptions.js';
 
+const calculatePrice = (price, weight, rate, mu) => {
+	let deliveryPrice = 0;
+	if (weight <= 10) {
+		deliveryPrice = 10 * rate;
+	} else if (weight > 10 && weight <= 15) {
+		deliveryPrice = 15 * rate;
+	} else {
+		deliveryPrice = 99999999 * rate;
+	}
+	return ((price * (mu / 100 + 1) + deliveryPrice) / rate).toFixed(2);
+};
 const rozetkaFeed = async (
 	data,
 	language,
@@ -23,26 +35,13 @@ const rozetkaFeed = async (
 		options,
 	}
 ) => {
-	const calculatePrice = (price, weight, rate) => {
-		let deliveryPrice = 0;
-		if (weight <= 10) {
-			deliveryPrice = 10 * rate;
-		} else if (weight > 10 && weight <= 15) {
-			deliveryPrice = 15 * rate;
-		} else {
-			deliveryPrice = 99999999 * rate;
-		}
-		return ((price * (mu / 100 + 1) + deliveryPrice) / rate).toFixed(2);
-	};
 	const manualDescriptions = await connectToGoogleSheets(
 		'1gZOIB2o8RRah4R3xrX_6t1DupbqUF1VQefnQ5CNfGWM'
 	).then((document) =>
-		getDataFromSheets(document, 'Arkusz1').then((data) => data)
+		getDataFromSheets(document, 'ROZETKA').then((data) => data)
 	);
 
-	const eurRate = await getCurrencyRates('EUR').then((data) => data);
-	const uahRate = await getCurrencyRates('UAH').then((data) => data);
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -53,9 +52,6 @@ const rozetkaFeed = async (
 				weight,
 				stock,
 				producer,
-				title,
-				description,
-				variantName,
 				sellPrice,
 				images,
 				category,
@@ -72,13 +68,6 @@ const rozetkaFeed = async (
 			}
 			if (stock < minStock) return;
 
-			// if (
-			// 	!options.includeVariantIds.some(
-			// 		(id) => id === parseInt(variantId)
-			// 	)
-			// )
-			// 	return;
-
 			const filteredAttributes = (
 				attributes[language].length === undefined
 					? [attributes[language]]
@@ -93,10 +82,8 @@ const rozetkaFeed = async (
 				})
 				.filter(Boolean);
 
-			const storeUrl = getStoreUrl(language, 'Rea');
-
 			const priceInEur = parseFloat(
-				calculatePrice(sellPrice[language].price, weight, 43.41)
+				calculatePrice(sellPrice[language].price, weight, 43.41, mu)
 			);
 			const manualDescriptionIndex = manualDescriptions.findIndex(
 				(desc) => parseInt(desc.variantId) === parseInt(variantId)
@@ -112,7 +99,6 @@ const rozetkaFeed = async (
 				ean,
 				stock,
 				weight,
-				// title: `${producer} ${manualDescriptions[manualDescriptionIndex].title_ua.replace('REA ', '').replace('Rea ', '')} ${variantName[language]}`,
 				title: manualDescriptions[manualDescriptionIndex].title_ua,
 				description:
 					manualDescriptions[manualDescriptionIndex].description_ua,
@@ -121,14 +107,12 @@ const rozetkaFeed = async (
 					category[language][0].length === undefined
 						? [category[language][0]]
 						: category[language][0],
-				images: images
-					.map((img) => storeUrl + 'picture/' + img)
-					.filter(
-						(img, index, array) =>
-							index < 13 || index === array.length - 1
-					),
+				images: imagesUrl(images, language, aliases).filter(
+					(img, index, array) =>
+						index < 13 || index === array.length - 1
+				),
 				price: sellPrice[language].price,
-				url: storeUrl + url[language]['Rea'],
+				url: productUrl(url, language, aliases),
 				attributes: filteredAttributes,
 			};
 		})
@@ -255,22 +239,132 @@ const rozetkaXmlSchema = (data, root) => {
 	return rootElement;
 };
 
+const rozetkaGoogleSheets = (data, aliases) => {
+	return new Promise(async (resolve) => {
+		await connectToGoogleSheets(
+			'1gZOIB2o8RRah4R3xrX_6t1DupbqUF1VQefnQ5CNfGWM'
+		).then(async (document) => {
+			const sheet = await document.sheetsByTitle['ROZETKA'];
+			const rows = await sheet.getRows();
+			const sheetData = rows.map((row) => {
+				return row.toObject();
+			});
+
+			const products = excludedFilter(
+				aliasesFilter(data, aliases),
+				data.options
+			)
+				.map((product) => {
+					const {
+						id,
+						active,
+						variantId,
+						activeVariant,
+						sku,
+						producer,
+						title,
+						description,
+						weight,
+						sellPrice,
+						stock,
+					} = product;
+					if (sku === '') return;
+					if (variantId === '') return;
+					if (!activeVariant) return;
+					if (!active) return;
+
+					const existing = sheetData.filter(
+						(item) => item.sku === sku
+					);
+					const priceInEur = parseFloat(
+						calculatePrice(sellPrice.uk.price, weight, 43.41, 0)
+					);
+					if (existing.length === 0)
+						return {
+							id,
+							variantId,
+							sku,
+							producer,
+							priceInEur,
+							stock,
+							weight,
+							title_pl: title.pl,
+							title_ua: '',
+							description_pl: getDescription(
+								description,
+								'pl',
+								producer
+							),
+							description_ua: '',
+						};
+
+					if (existing[0].title_ua !== '')
+						return {
+							id,
+							variantId,
+							sku,
+							producer,
+							priceInEur,
+							stock,
+							weight,
+							title_pl: title.pl,
+							title_ua: existing[0].title_ua,
+							description_pl: getDescription(
+								description,
+								'pl',
+								producer
+							),
+							description_ua: existing[0].description_ua,
+						};
+					return {
+						id,
+						variantId,
+						sku,
+						producer,
+						priceInEur,
+						stock,
+						weight,
+						title_pl: title.pl,
+						title_ua: '',
+						description_pl: getDescription(
+							description,
+							'pl',
+							producer
+						),
+						description_ua: '',
+					};
+				})
+				.filter(Boolean)
+				.sort((a, b) => {
+					if (a.title_ua === '') return 1;
+					return -1;
+				});
+
+			const headers = Object.keys(products[0]);
+			await sheet.setHeaderRow([...headers]);
+			await sheet.clearRows();
+			await sheet.addRows(products);
+		});
+		resolve();
+	});
+};
+
 export const generateRozetkaFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
 		for await (const language of config.languages) {
-			await rozetkaFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, rozetkaXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'rozetka',
-								'xml',
-								'../generate/feed/'
-							)
-					)
-			);
+			await rozetkaFeed(products, language, config).then(async (data) => {
+				await xmlBuilider(data, rozetkaXmlSchema).then(
+					async (xml) =>
+						await saveFeedFileToDisk(
+							xml,
+							'rozetka',
+							'xml',
+							'../generate/feed/'
+						)
+				);
+			});
 		}
+		// await rozetkaGoogleSheets(products, config.aliases);
 		resolve();
 	});
 };

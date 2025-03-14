@@ -1,5 +1,6 @@
 import {
 	aliasesFilter,
+	excludedFilter,
 	getStoreUrl,
 	saveFeedFileToDisk,
 	titleWithVariantName,
@@ -12,6 +13,8 @@ import {
 	getDataFromSheets,
 } from '../../../utilities/googleSheets.js';
 import { format } from 'date-fns';
+import { imagesUrl } from '../../../utilities/urls.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 
 const skroutzFeed = async (
 	data,
@@ -22,6 +25,7 @@ const skroutzFeed = async (
 		activeProducts = true,
 		activeVariants = true,
 		minStock,
+		options,
 	}
 ) => {
 	const skroutzCategoriesSheets = await connectToGoogleSheets(
@@ -39,7 +43,7 @@ const skroutzFeed = async (
 		.catch((error) => 'error');
 	if (skroutzCategoriesSheets === 'error') return;
 
-	const mappedProducts = aliasesFilter(data, aliases)
+	const mappedProducts = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -116,7 +120,7 @@ const skroutzFeed = async (
 		await sheet.addRows(mappedProducts);
 	});
 
-	const products = aliasesFilter(data, aliases)
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const {
 				active,
@@ -159,9 +163,7 @@ const skroutzFeed = async (
 
 			if (currentCategory.length === 0) return;
 
-			const storeUrl = getStoreUrl(language, 'Rea');
-
-			const media = images.map((img) => storeUrl + 'picture/' + img);
+			const media = imagesUrl(images, language, aliases);
 
 			return {
 				id: variantId,
@@ -177,9 +179,7 @@ const skroutzFeed = async (
 				ean: !ean ? '' : ean,
 				availability: 'Παράδοση 1 έως 3 ημέρες',
 				weight: weight * 1000,
-				description: description[language]
-					.replace('&oacute;', 'ó')
-					.replace('żar&oacute;wki', '*'),
+				description: getDescription(description, language, producer),
 				quantity: stock < minStock ? 0 : stock,
 			};
 		})
