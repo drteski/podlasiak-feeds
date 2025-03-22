@@ -18,10 +18,10 @@ export const getDefaultAlias = (producer) => {
 			return 'Toolight';
 		case 'Spectrum LED':
 			return 'Toolight';
-		case 'Rea':
-			return 'Rea';
 		case 'Nowodvorski':
 			return 'Toolight';
+		case 'Rea':
+			return 'Rea';
 		case 'Quadron':
 			return 'Rea';
 		case 'Calani':
@@ -39,15 +39,15 @@ export const getDescription = (data, language, producer, all = false) => {
 			Rea:
 				data[language]['Rea'] === undefined
 					? ''
-					: replaceEntities(data[language]['Rea']),
+					: data[language]['Rea'],
 			Tutumi:
 				data[language]['Tutumi'] === undefined
 					? ''
-					: replaceEntities(data[language]['Tutumi']),
+					: data[language]['Tutumi'],
 			Toolight:
 				data[language]['Toolight'] === undefined
 					? ''
-					: replaceEntities(data[language]['Toolight']),
+					: data[language]['Toolight'],
 		};
 	} else {
 		if (
@@ -56,12 +56,7 @@ export const getDescription = (data, language, producer, all = false) => {
 		) {
 			return '';
 		} else {
-			// console.log(
-			// 	replaceEntities(data[language][`${getDefaultAlias(producer)}`])
-			// );
-			return replaceEntities(
-				data[language][`${getDefaultAlias(producer)}`]
-			);
+			return data[language][`${getDefaultAlias(producer)}`];
 		}
 	}
 };

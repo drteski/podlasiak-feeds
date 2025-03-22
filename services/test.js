@@ -33,15 +33,6 @@ const processData = async () => {
 	const data = await getFile();
 
 	const prods = data.map((item, index) => {
-		// console.log(
-		// 	'<p>' +
-		// 		item['Metafield: custom'][
-		// 			'second_description_row '
-		// 		].single_line_text_field
-		// 			.replace(/\n{2,}/g, '</p><p>')
-		// 			.replace(/\n/g, '<br>') +
-		// 		'</p>'
-		// );
 		if (index !== 1) return;
 		console.log(
 			item['Metafield: custom']['second_description_row ']

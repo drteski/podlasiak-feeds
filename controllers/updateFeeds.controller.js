@@ -11,7 +11,10 @@ import { generateToolightCatalogFeed } from '../services/feed/toolight-catalog/t
 import { generateBazzarFeed } from '../services/feed/bazzar/bazzarFeed.js';
 import { generateGalaxusFeed } from '../services/feed/galaxus/galaxusFeed.js';
 import { generateSkroutzFeed } from '../services/feed/skroutz/feedSkroutz.js';
-import { generateSubiektFeed } from '../services/feed/subiekt/subiektFeed.js';
+import {
+	generateSubiektFeed,
+	getSubiektProducts,
+} from '../services/feed/subiekt/subiektFeed.js';
 import { generateCatalogPatrycjaFeed } from '../services/feed/catalog-patrycja/catalogPatrycjaFeed.js';
 import { generateCeneoFeed } from '../services/feed/ceneo/ceneoFeed.js';
 import { generateJeftinieFeed } from '../services/feed/jeftinie/jeftinieFeed.js';
@@ -22,35 +25,40 @@ import { generateGoogleFeed } from '../services/feed/google/googleFeed.js';
 import { generateBaselinkerFeed } from '../services/feed/baselinker/baselinkerFeed.js';
 import { generateAllPricesFeed } from '../services/feed/allPrices/allPricesFeed.js';
 import { generateFruugoFeed } from '../services/feed/fruugo/fruugoFeed.js';
+import { generateDomilampyPlFeed } from '../services/feed/shopify/domilampy_pl/domilampyPlFeed.js';
 
 const feedGenerators = [
+	{ generator: generateDomilampyPlFeed, config: feedsConfig.domilampy_pl },
 	{ generator: generateGalaxusFeed, config: feedsConfig.galaxus },
 	{ generator: generateRozetkaFeed, config: feedsConfig.rozetka },
-	// { generator: generateAllPricesFeed, config: feedsConfig.allPrices },
-	// { generator: generateGoogleFeed, config: feedsConfig.google },
-	// { generator: generateBaselinkerFeed, config: feedsConfig.baselinker },
-	// { generator: generatePricesCatalogFeed, config: feedsConfig.prices },
-	// { generator: generateCeneoFeed, config: feedsConfig.ceneo },
-	// { generator: generateBazzarFeed, config: feedsConfig.bazzar },
-	// { generator: generatePepitaFeed, config: feedsConfig.pepita },
-	// { generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
-	// { generator: generateMdfFeed, config: feedsConfig.mdf },
-	// { generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
-	// { generator: generateSkroutzFeed, config: feedsConfig.skroutz },
-	// {
-	// 	generator: generateCatalogPatrycjaFeed,
-	// 	config: feedsConfig.catalogPatrycja,
-	// },
-	// { generator: generateFyndiqFeed, config: feedsConfig.fyndiq },
-	// { generator: generateBianoFeed, config: feedsConfig.biano },
-	// { generator: generateJeftinieFeed, config: feedsConfig.jeftinie },
-	// { generator: generateWszystkoFeed, config: feedsConfig.wszystko },
+	{ generator: generateAllPricesFeed, config: feedsConfig.allPrices },
+	{ generator: generateGoogleFeed, config: feedsConfig.google },
+	{ generator: generateBaselinkerFeed, config: feedsConfig.baselinker },
+	{ generator: generatePricesCatalogFeed, config: feedsConfig.prices },
+	{ generator: generateCeneoFeed, config: feedsConfig.ceneo },
+	{ generator: generateBazzarFeed, config: feedsConfig.bazzar },
+	{ generator: generatePepitaFeed, config: feedsConfig.pepita },
+	{ generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
+	{ generator: generateMdfFeed, config: feedsConfig.mdf },
+	{ generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
+	{ generator: generateSkroutzFeed, config: feedsConfig.skroutz },
+	{
+		generator: generateCatalogPatrycjaFeed,
+		config: feedsConfig.catalogPatrycja,
+	},
+	{ generator: generateFyndiqFeed, config: feedsConfig.fyndiq },
+	{ generator: generateBianoFeed, config: feedsConfig.biano },
+	{ generator: generateJeftinieFeed, config: feedsConfig.jeftinie },
+	{ generator: generateWszystkoFeed, config: feedsConfig.wszystko },
 	// { generator: generateFruugoFeed, config: feedsConfig.fruugo },
 	// {
 	// 	generator: generateToolightCatalogFeed,
 	// 	config: feedsConfig.toolightCatalog,
 	// },
 ];
+
+export const subiektProducts = await getSubiektProducts().then((data) => data);
+
 export const generateFeeds = async (bar) => {
 	return new Promise(async (resolve, reject) => {
 		const products = await getProducts()
@@ -90,7 +98,7 @@ export const generateFeeds = async (bar) => {
 			dane: 'Przesyłanie danych z Subiekta',
 			additionalData: ``,
 		});
-		await generateSubiektFeed();
+		await generateSubiektFeed(subiektProducts);
 		bar.update(1, {
 			dane: 'Przesłano dane z Subiekta',
 			additionalData: ``,

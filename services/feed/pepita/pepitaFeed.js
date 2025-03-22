@@ -4,6 +4,7 @@ import {
 	aliasesFilter,
 	excludedFilter,
 	getStoreUrl,
+	replaceEntities,
 	saveFeedFileToDisk,
 	xmlBuilider,
 } from '../../processFeed.js';
@@ -60,7 +61,9 @@ const pepitaFeed = async (
 				sku,
 				ean,
 				title: title[language],
-				description: getDescription(description, language, producer),
+				description: replaceEntities(
+					getDescription(description, language, producer)
+				),
 				price: addMuToPrice(sellPrice[language].price, mu),
 				currency: sellPrice[language].currency,
 				category:

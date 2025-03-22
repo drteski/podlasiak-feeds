@@ -5,6 +5,7 @@ import {
 	getStoreUrl,
 	saveFeedFileToDisk,
 } from '../../processFeed.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 
 const wszystkoFeed = async (
 	data,
@@ -144,7 +145,7 @@ const wszystkoFeed = async (
 				producer,
 				aliases: aliases.join(', '),
 				title: title[language],
-				description: description[language],
+				description: getDescription(description, language, producer),
 				variantName: variantName[language],
 				basePrice: addMuToPrice(basePrice[language].price, mu),
 				sellPrice: addMuToPrice(sellPrice[language].price, mu),

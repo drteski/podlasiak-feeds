@@ -6,6 +6,8 @@ import {
 	xmlBuilider,
 } from '../../processFeed.js';
 import { getSubiektProducts } from '../subiekt/subiektFeed.js';
+import { getDescription } from '../../../utilities/descriptions.js';
+import { imagesUrl } from '../../../utilities/urls.js';
 
 const baselinkerFeed = async (
 	data,
@@ -89,15 +91,13 @@ const baselinkerFeed = async (
 				id,
 				variantId,
 				title: titleWithVariantName,
-				description: description[language],
+				description: getDescription(description, language, producer),
 				brand: producer,
 				sku,
 				ean,
 				stock: subiektStock.length !== 0 ? subiektStock[0].Stan : stock,
 				weight,
-				images: images
-					.map((img) => storeUrl + 'picture/' + img)
-					.slice(0, 16),
+				images: imagesUrl(images, language, aliases),
 				attributes: filteredAttributes,
 				price: sellPrice[language].price,
 			};

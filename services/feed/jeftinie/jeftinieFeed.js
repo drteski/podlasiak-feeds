@@ -6,6 +6,7 @@ import {
 	xmlBuilider,
 } from '../../processFeed.js';
 import { imagesUrl, productUrl } from '../../../utilities/urls.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 
 const jeftinieFeed = async (
 	data,
@@ -67,7 +68,7 @@ const jeftinieFeed = async (
 			return {
 				id: variantId,
 				name: title[language],
-				description: description[language],
+				description: getDescription(description, language, producer),
 				link: productUrl(url, language, aliases),
 				producer,
 				quantity: stock,

@@ -103,9 +103,7 @@ export const processJsonProducts = (fileName, data) => {
 					url: mapUrls(product.urls, aliases),
 					stock: parseInt(variant.stockTotal.stock[0].$quantity),
 					producer: mapProducers(product.$producer, producers),
-					description: mapSimpleData(
-						product.descriptions.description
-					),
+					description: mapDescriptions(product.descriptions, aliases),
 					categories: mapCategories(product.categories, categories),
 					images: mapImages(product.images),
 					price: mapPrices(variant.basePrice),

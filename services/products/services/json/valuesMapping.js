@@ -1,6 +1,7 @@
 import { tariff } from '../../../../data/tariff.js';
 import { newConfig } from '../../../../config/config.js';
 import { stripHtml } from 'string-strip-html';
+import { replaceEntities } from '../../../processFeed.js';
 export const mapSimpleData = (data) => {
 	if (data[0]?.$alias === undefined) {
 		return tariff.reduce((prev, curr) => {
@@ -70,9 +71,10 @@ export const mapDescriptions = (data, allAliases) => {
 						lang === desc.$lang
 					);
 				});
+				const description = descriptions(filteredDescriptions, curr);
 				return {
 					...prev,
-					[`${curr}`]: descriptions(filteredDescriptions, curr),
+					[`${curr}`]: description === undefined ? '' : description,
 				};
 			} else {
 				return {

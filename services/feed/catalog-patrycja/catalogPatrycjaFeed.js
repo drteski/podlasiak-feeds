@@ -100,8 +100,8 @@ const catalogPatrycjaFeed = async (
 				url: productUrl(url, language, aliases),
 				sellPrice:
 					sellPrice[language].price === basePrice[language].price
-						? sellPrice[language].price
-						: '',
+						? ''
+						: sellPrice[language].price,
 				basePrice: basePrice[language].price,
 				images: imagesUrl(images, language, aliases),
 				category: getFinalCategory(category[language], true),

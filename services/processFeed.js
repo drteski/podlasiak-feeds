@@ -8,6 +8,7 @@ import ObjectsToCsv from 'objects-to-csv-file';
 import dotenv from 'dotenv';
 import ftp from 'basic-ftp';
 import path from 'path';
+import { subiektProducts } from '../controllers/updateFeeds.controller.js';
 
 dotenv.config({ path: '../.env' });
 
@@ -76,11 +77,6 @@ export const getProducts = async () => {
 		});
 		resolve(data);
 	});
-};
-export const aliasesFilter = (products, aliases) => {
-	return products.filter((product) =>
-		product.aliases.some((alias) => aliases.includes(alias))
-	);
 };
 
 export const excludedFilter = (products, options) => {
@@ -178,10 +174,7 @@ export const titleWithVariantName = (title, variantName) => {
 		})
 		.join(' ');
 
-	// const regex = /\d+/gm;
 	const variantMatch = variantName.match(/\d+/gm);
-	// const titleMatch = preparedTitle.match(/\d{1,}x\d{1,}/gm);
-	// let newTitle = '';
 	let newVariantName = '';
 	if (variantMatch !== null) {
 		if (variantMatch.length < 2) {
@@ -257,86 +250,7 @@ export const titleWithVariantName = (title, variantName) => {
 				.join(' ');
 		newVariantName = variantName;
 	}
-	// 	if (titleMatch !== null) {
-	// 		// if (titleMatch.length < 2) {
-	// 		// 	if (titleMatch[0][0] !== '0') {
-	// 		// 		if (titleMatch[0].length !== 4) {
-	// 		// 			if (parseInt(titleMatch[0]) < 50) {
-	// 		// 				if (variantName.match(/\([\d]+\)/gm)) {
-	// 		// 					newTitle = variantName
-	// 		// 						.replace(/\s\([\d]+\)/gm, '')
-	// 		// 						.replace(/\([\d]+\)/gm, '');
-	// 		// 				}
-	// 		// 				if (
-	// 		// 					!isNaN(
-	// 		// 						parseInt(
-	// 		// 							variantName
-	// 		// 								.replace(' "N"', '')
-	// 		// 								.replace(' "n"', '')
-	// 		// 						)
-	// 		// 					)
-	// 		// 				) {
-	// 		// 					newTitle = '';
-	// 		// 				} else {
-	// 		// 					newTitle = variantName;
-	// 		// 				}
-	// 		// 			} else {
-	// 		// 				newTitle = titleMatch[0];
-	// 		// 			}
-	// 		// 		} else {
-	// 		// 			newTitle = variantName;
-	// 		// 		}
-	// 		// 	} else {
-	// 		// 		newTitle = variantName;
-	// 		// 	}
-	// 		// } else {
-	// 		// 	if (titleMatch.length >= 3) {
-	// 		// 		if (titleMatch.length === 3) {
-	// 		// 			if (variantName.match(/\d{1,}x\d{1,}x\d{1,}/gm)) {
-	// 		// 				newTitle = variantName;
-	// 		// 			}
-	// 		// 			if (parseInt(titleMatch[0]) < 10) newTitle = variantName;
-	// 		// 			if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm))
-	// 		// 				newTitle = variantName;
-	// 		// 			newTitle = titleMatch.join('x');
-	// 		// 		} else {
-	// 		// 			if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm))
-	// 		// 				newTitle = variantName;
-	// 		// 			newTitle = variantName;
-	// 		// 		}
-	// 		// 	} else {
-	// 		// 		if (titleMatch[0][0] === '0') newTitle = variantName;
-	// 		// 		if (parseInt(titleMatch[0]) < 10) newTitle = variantName;
-	// 		// 		newTitle = titleMatch.join('x');
-	// 		// 	}
-	// 		// }
-	// 		console.log(
-	// 			preparedTitle.replace(` ${newVariantName}`, ''),
-	// 			titleMatch,
-	// 			' ',
-	// 			newVariantName
-	// 		);
-	// 	} else {
-	// 		// if (variantName !== '')
-	// 		// 	newTitle = variantName
-	// 		// 		.replace(' / ', '/')
-	// 		// 		.replace('/', ' / ')
-	// 		// 		.replace(',', '')
-	// 		// 		.split(' ')
-	// 		// 		.filter((word) => word !== '')
-	// 		// 		.map((word) => {
-	// 		// 			if (word === 'XL' || word === 'XXL' || word === 'XS')
-	// 		// 				return word;
-	// 		// 			return (
-	// 		// 				word[0].toUpperCase() +
-	// 		// 				word.slice(1, word.length).toLowerCase()
-	// 		// 			);
-	// 		// 		})
-	// 		// 		.join(' ');
-	// 		// newTitle = variantName;
-	// 	}
-	//
-	// 	// console.log(`${newTitle} ${newVariantName}`);
+
 	return `${preparedTitle} ${newVariantName}`;
 };
 
@@ -356,13 +270,113 @@ export const replaceEntities = (data) => {
 		.join(' ');
 };
 
-export const productsChunker = (data, chunks) => {
-	const totalFiles = Math.ceil(data.length / chunks);
+export const shopifyCategoryTypes = (categories) => {
+	if (categories.length === 0) return '';
+	if (categories[categories.length - 1].length === undefined) {
+		return categories[categories.length - 1].name;
+	} else {
+		if (categories[categories.length - 1].length === 0) return '';
+		return categories[categories.length - 1]
+			.map((cat) => cat.name)
+			.join(' > ');
+	}
+};
+
+export const productsChunker = (products, chunks) => {
+	const totalFiles = Math.ceil(products.length / chunks);
 	const productsChunks = [];
 	for (let index = 0; index < totalFiles; index++) {
-		productsChunks.push(data.slice(index * chunks, (index + 1) * chunks));
+		productsChunks.push(
+			products.slice(index * chunks, (index + 1) * chunks)
+		);
 	}
 	return productsChunks;
+};
+export const aliasesFilter = (products, aliases) => {
+	return products
+		.filter((product) =>
+			product.aliases.some((alias) => aliases.includes(alias))
+		)
+		.filter((product) => {
+			const { producer, aliases } = product;
+			switch (producer) {
+				case 'Tutumi':
+					return aliases.includes('Tutumi');
+				case 'FlexiFit':
+					return aliases.includes('Tutumi');
+				case 'Bluegarden':
+					return aliases.includes('Tutumi');
+				case 'PuppyJoy':
+					return aliases.includes('Tutumi');
+				case 'Kigu':
+					return aliases.includes('Tutumi');
+				case 'Fluffy Glow':
+					return aliases.includes('Tutumi');
+				case 'Toolight':
+					return aliases.includes('Toolight');
+				case 'Spectrum LED':
+					return aliases.includes('Toolight');
+				case 'Nowodvorski':
+					return aliases.includes('Toolight');
+				case 'Rea':
+					return aliases.includes('Rea');
+				case 'Quadron':
+					return aliases.includes('Rea');
+				case 'Calani':
+					return aliases.includes('Rea');
+				case 'Hadwao':
+					return aliases.includes('Rea');
+				default:
+					return aliases.includes('Rea');
+			}
+		});
+};
+export const productsFilter = (
+	products,
+	{
+		activeProducts,
+		activeVariants,
+		minStock,
+		emptySku = true,
+		emptyVariant = true,
+	}
+) => {
+	return products
+		.map((product) => {
+			const { active, activeVariant, sku, stock, variantId } = product;
+			const subiektProduct = subiektProducts.filter(
+				(sub) => sub.SKU.toLowerCase() === sku.toLowerCase()
+			);
+
+			const subiektStock = () => {
+				if (subiektProduct.length === 0) {
+					if (!active) return 0;
+					if (stock < minStock) return 0;
+					return stock;
+				} else {
+					return parseInt(subiektProduct[0]['Dostępne']) < minStock
+						? 0
+						: parseInt(subiektProduct[0]['Dostępne']);
+				}
+			};
+
+			if (emptyVariant) {
+				if (variantId === '') return;
+			}
+			if (emptySku) {
+				if (sku === '') return;
+			}
+
+			if (activeProducts) {
+				if (!active) return;
+			}
+
+			if (activeVariants) {
+				if (!activeVariant) return;
+			}
+			return { stock: subiektStock(), ...product };
+		})
+		.filter(Boolean);
 };
 export const uploadFeeds = async (localFiles, bar) => {
 	return new Promise(async (resolve, reject) => {
@@ -404,12 +418,12 @@ export const uploadFeeds = async (localFiles, bar) => {
 		});
 		await client.uploadFromDir(localFiles, FTP_LOCATION).catch((error) => {
 			return uploadFeeds(localFiles, bar);
-			// if (error.code === 'ETIMEOUT') {
-			// } else {
-			// 	console.log(error);
-			// 	reject(error);
-			// }
 		});
+		await client
+			.uploadFromDir(localFiles, FTP_LOCATION + 'feeds')
+			.catch((error) => {
+				return uploadFeeds(localFiles, bar);
+			});
 		bar.update(0, {
 			dane: 'Przesłano do FTP',
 			additionalData: ``,

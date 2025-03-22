@@ -12,7 +12,7 @@ export const imagesUrl = (data, language, aliases, options = '') => {
 		height: 2000,
 		filters: {
 			quality: 100,
-			fill: 'transparent',
+			fill: '#ffffff',
 		},
 	};
 

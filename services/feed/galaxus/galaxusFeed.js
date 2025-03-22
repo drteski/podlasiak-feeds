@@ -11,10 +11,7 @@ import {
 } from '../../../utilities/googleSheets.js';
 import { getFinalCategory } from '../../../utilities/category.js';
 import { currencyDefaults } from '../../../config/config.js';
-import {
-	getDefaultAlias,
-	getDescription,
-} from '../../../utilities/descriptions.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 import { imagesUrl } from '../../../utilities/urls.js';
 
 const pricesProducts = await connectToGoogleSheets(
@@ -109,17 +106,6 @@ const galaxusProductsFeed = async (
 			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined)
 				return;
 			if (galaxusExistingPrice.length === 0) return;
-
-			console.log(
-				// language,
-				// producer,
-				variantId,
-				getDefaultAlias(producer),
-				`Opis Rea: ${getDescription(description, language, producer, true).Rea}`,
-				`Opis Tutumi: ${getDescription(description, language, producer, true).Tutumi}`,
-				`Opis Toolight: ${getDescription(description, language, producer, true).Toolight}`
-				// description[language]
-			);
 
 			return {
 				ProviderKey: sku,

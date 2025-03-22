@@ -119,21 +119,19 @@ export const getSubiektProducts = async () => {
 	});
 };
 
-export const generateSubiektFeed = () => {
+export const generateSubiektFeed = (data) => {
 	return new Promise(async (resolve) => {
-		await getSubiektProducts().then(async (data) => {
-			await connectToGoogleSheets(
-				'1VHOE9a1QxmPc4XdC979f7NltHBTiDMcWoX792nrj45Y'
-			).then(async (document) => {
-				const sheet = await document.sheetsByTitle['Subiekt - Towar'];
-				const headers = Object.keys(data[0]);
-				await sheet.setHeaderRow([
-					...headers,
-					format(Date.now(), 'dd-MM-yyyy HH:mm:ss'),
-				]);
-				await sheet.clearRows();
-				await sheet.addRows(data);
-			});
+		await connectToGoogleSheets(
+			'1VHOE9a1QxmPc4XdC979f7NltHBTiDMcWoX792nrj45Y'
+		).then(async (document) => {
+			const sheet = await document.sheetsByTitle['Subiekt - Towar'];
+			const headers = Object.keys(data[0]);
+			await sheet.setHeaderRow([
+				...headers,
+				format(Date.now(), 'dd-MM-yyyy HH:mm:ss'),
+			]);
+			await sheet.clearRows();
+			await sheet.addRows(data);
 		});
 		resolve();
 	});

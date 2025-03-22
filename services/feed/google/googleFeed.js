@@ -7,6 +7,7 @@ import {
 } from '../../processFeed.js';
 import { format, formatISO } from 'date-fns';
 import { imagesUrl } from '../../../utilities/urls.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 const googleFeed = async (
 	data,
 	language,
@@ -61,7 +62,7 @@ const googleFeed = async (
 				ean,
 				sku,
 				title: title[language],
-				description: description[language],
+				description: getDescription(description, language, producer),
 				brand: producer,
 				url: storeUrl + url[language]['Rea'],
 				stock,

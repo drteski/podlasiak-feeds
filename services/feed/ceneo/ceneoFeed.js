@@ -7,6 +7,7 @@ import {
 } from '../../processFeed.js';
 import { getFinalCategory } from '../../../utilities/category.js';
 import { imagesUrl, productUrl } from '../../../utilities/urls.js';
+import { getDescription } from '../../../utilities/descriptions.js';
 
 const ceneoFeed = async (
 	data,
@@ -83,7 +84,7 @@ const ceneoFeed = async (
 				title: titleWithVariantName,
 				stock,
 				weight,
-				description: description[language],
+				description: getDescription(description, language, producer),
 				specification: [
 					{ name: 'Producent', value: producer },
 					{ name: 'EAN', value: ean },

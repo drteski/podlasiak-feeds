@@ -450,7 +450,11 @@ const matrixifyFeedOld = async (
 ) => {
 	const totalProducts = aliasesFilter(
 		data,
-		language === 'ro' ? ['Rea', 'Toolight'] : aliases
+		language === 'ro'
+			? ['Rea', 'Toolight']
+			: language === 'pl'
+				? ['Toolight']
+				: aliases
 	);
 
 	const products = productsChunker(totalProducts, chunks).map((prods) => {
@@ -472,7 +476,6 @@ const matrixifyFeedOld = async (
 				images,
 				sellPrice,
 			} = product;
-			if (language !== 'pl') return;
 
 			if (variantId === '') return;
 
