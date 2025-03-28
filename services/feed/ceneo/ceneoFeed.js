@@ -1,99 +1,29 @@
-import {
-	aliasesFilter,
-	excludedFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-	xmlBuilider,
-} from '../../processFeed.js';
+import { prepareProducts, saveFeedFileToDisk, titleWithVariantName, xmlBuilider } from '../../processFeed.js';
 import { getFinalCategory } from '../../../utilities/category.js';
 import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 import { getDescription } from '../../../utilities/descriptions.js';
 
-const ceneoFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const products = excludedFilter(aliasesFilter(data, aliases), options)
+const ceneoFeed = async (data, language, options) => {
+	const products = prepareProducts(data, options)
 		.map((product) => {
-			const {
-				active,
-				variantName,
-				activeVariant,
-				variantId,
-				title,
-				description,
-				sku,
-				stock,
-				ean,
-				producer,
-				weight,
-				category,
-				attributes,
-				images,
-				sellPrice,
-				url,
-			} = product;
-			if (producer === '') return;
+			const { variantName, variantId, title, description, sku, stock, ean, producer, weight, category, attributes, images, sellPrice, url } = product;
 
-			if (variantId === '') return;
-
-			if (activeVariants) {
-				if (!activeVariant) return;
-			}
-
-			const attributeArray =
-				attributes[language].length === undefined
-					? [attributes[language]]
-					: attributes[language];
+			const attributeArray = attributes[language].length === undefined ? [attributes[language]] : attributes[language];
 
 			const specification = attributeArray.filter((attribute) => {
-				if (
-					attribute.name !== 'Wariant opcji' ||
-					attribute.name !== 'Informacja o dostawie'
-				)
-					return attribute;
+				if (attribute.name !== 'Wariant opcji' || attribute.name !== 'Informacja o dostawie') return attribute;
 			});
-
-			const titleWithVariantName =
-				title[language] +
-				' ' +
-				variantName[language]
-					.replace('Drzwi:', '')
-					.replace('Tür: ', '')
-					.replace('Duschwand: ', '')
-					.replace('Wand:', 'x')
-					.replace('0 Tür: ', '0 x ')
-					.replace(' Ścianka: ', 'x')
-					.replace(' Drzwi: ', 'x')
-					.replace(' x Ścianka:', 'x')
-					.replace('Drzwi', '')
-					.replace(':x', 'x')
-					.replace('x1', ' x 1')
-					.replace('---', '');
 
 			return {
 				variantId,
-				title: titleWithVariantName,
+				title: titleWithVariantName(title[language], variantName[language]),
 				stock,
 				weight,
 				description: getDescription(description, language, producer),
-				specification: [
-					{ name: 'Producent', value: producer },
-					{ name: 'EAN', value: ean },
-					{ name: 'Kod producenta', value: sku },
-					...specification,
-				],
-				url: productUrl(url, language, aliases),
+				specification: [{ name: 'Producent', value: producer }, { name: 'EAN', value: ean }, { name: 'Kod producenta', value: sku }, ...specification],
+				url: productUrl(url, language, producer),
 				price: sellPrice[language].price,
-				images: imagesUrl(images, language, aliases),
+				images: imagesUrl(images, language, producer),
 				category: getFinalCategory(category[language], true),
 			};
 		})
@@ -138,6 +68,9 @@ const ceneoXmlSchema = (data, root) => {
 		.ele('email')
 		.txt('biuro.rea@podlasiak.com.pl')
 		.up()
+		.ele('phoneNumber')
+		.txt('+48857337777')
+		.up()
 		.up()
 		.up()
 		.up();
@@ -165,29 +98,15 @@ const ceneoXmlSchema = (data, root) => {
 			.ele('images');
 
 		const images = () => {
-			return product.images.forEach((img, index) =>
-				index === 0
-					? start.ele('main', { url: img }).up()
-					: start.ele('i', { url: img }).up()
-			);
+			return product.images.forEach((img, index) => (index === 0 ? start.ele('main', { url: img }).up() : start.ele('i', { url: img }).up()));
 		};
 
 		images();
-		const end = start
-			.up()
-			.ele('attrs')
-			.ele('a', { name: 'Producent odpowiedzialny' })
-			.dat('Podlasiak Andrzej Cylwik Spółka Komandytowa')
-			.up();
+		const end = start.up().ele('attrs').ele('a', { name: 'Producent odpowiedzialny' }).dat('Rea').up();
 		const attributes = () => {
 			return product.specification.forEach((attribute) => {
-				if (attribute.value === undefined || attribute.value === '')
-					return;
-				return end
-					.ele('a', { name: attribute.name })
-					.dat(attribute.value)
-					.up()
-					.up();
+				if (attribute.value === undefined || attribute.value === '') return;
+				return end.ele('a', { name: attribute.name }).dat(attribute.value).up().up();
 			});
 		};
 		attributes();
@@ -199,16 +118,7 @@ export const generateCeneoFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
 		for await (const language of config.languages) {
 			await ceneoFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, ceneoXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'ceneo',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, ceneoXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'ceneo', 'xml', '../generate/feed/'))
 			);
 		}
 		resolve();

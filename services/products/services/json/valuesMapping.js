@@ -1,7 +1,6 @@
 import { tariff } from '../../../../data/tariff.js';
 import { newConfig } from '../../../../config/config.js';
 import { stripHtml } from 'string-strip-html';
-import { replaceEntities } from '../../../processFeed.js';
 export const mapSimpleData = (data) => {
 	if (data[0]?.$alias === undefined) {
 		return tariff.reduce((prev, curr) => {

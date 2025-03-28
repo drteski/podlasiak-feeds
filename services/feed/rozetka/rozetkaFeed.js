@@ -1,15 +1,7 @@
-import {
-	aliasesFilter,
-	excludedFilter,
-	saveFeedFileToDisk,
-	xmlBuilider,
-} from '../../processFeed.js';
-import {
-	connectToGoogleSheets,
-	getDataFromSheets,
-} from '../../../utilities/googleSheets.js';
-import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 import { format } from 'date-fns';
+import { prepareProducts, saveFeedFileToDisk, xmlBuilider } from '../../processFeed.js';
+import { connectToGoogleSheets, getDataFromSheets } from '../../../utilities/googleSheets.js';
+import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 import { getDescription } from '../../../utilities/descriptions.js';
 
 const calculatePrice = (price, weight, rate, mu) => {
@@ -23,74 +15,26 @@ const calculatePrice = (price, weight, rate, mu) => {
 	}
 	return ((price * (mu / 100 + 1) + deliveryPrice) / rate).toFixed(2);
 };
-const rozetkaFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const manualDescriptions = await connectToGoogleSheets(
-		'1gZOIB2o8RRah4R3xrX_6t1DupbqUF1VQefnQ5CNfGWM'
-	).then((document) =>
-		getDataFromSheets(document, 'ROZETKA').then((data) => data)
-	);
+const rozetkaFeed = async (data, language, options) => {
+	const manualDescriptions = await connectToGoogleSheets('1gZOIB2o8RRah4R3xrX_6t1DupbqUF1VQefnQ5CNfGWM').then((document) => getDataFromSheets(document, 'ROZETKA').then((data) => data));
 
-	const products = excludedFilter(aliasesFilter(data, aliases), options)
+	const products = prepareProducts(data, options)
 		.map((product) => {
-			const {
-				active,
-				variantId,
-				activeVariant,
-				sku,
-				ean,
-				weight,
-				stock,
-				producer,
-				sellPrice,
-				images,
-				category,
-				url,
-				attributes,
-			} = product;
-			if (variantId === '') return;
-			if (sku === '') return;
-			if (activeProducts) {
-				if (!active) return;
-			}
-			if (activeVariants) {
-				if (!activeVariant) return;
-			}
-			if (stock < minStock) return;
+			const { variantId, sku, ean, weight, stock, producer, sellPrice, images, category, url, attributes } = product;
 
-			const filteredAttributes = (
-				attributes[language].length === undefined
-					? [attributes[language]]
-					: attributes[language]
-			)
+			const filteredAttributes = (attributes[language].length === undefined ? [attributes[language]] : attributes[language])
 				.map((attribute) => {
-					if (attribute.value === '' || attribute.value === undefined)
-						return;
+					if (attribute.value === '' || attribute.value === undefined) return;
 					if (attribute.value === 'Wysyłamy w: 24h') return;
 					if (attribute.value === '*Wysyłamy w: 24h*') return;
 					return attribute;
 				})
 				.filter(Boolean);
 
-			const priceInEur = parseFloat(
-				calculatePrice(sellPrice[language].price, weight, 43.41, mu)
-			);
-			const manualDescriptionIndex = manualDescriptions.findIndex(
-				(desc) => parseInt(desc.variantId) === parseInt(variantId)
-			);
+			const priceInEur = parseFloat(calculatePrice(sellPrice[language].price, weight, 43.41, 0));
+			const manualDescriptionIndex = manualDescriptions.findIndex((desc) => parseInt(desc.variantId, 10) === parseInt(variantId, 10));
 			if (manualDescriptionIndex === -1) return;
-			if (manualDescriptions[manualDescriptionIndex].title_ua === '')
-				return;
+			if (manualDescriptions[manualDescriptionIndex].title_ua === '') return;
 			if (category[language].length === 0) return;
 			if (priceInEur > 150) return;
 			return {
@@ -100,19 +44,12 @@ const rozetkaFeed = async (
 				stock,
 				weight,
 				title: manualDescriptions[manualDescriptionIndex].title_ua,
-				description:
-					manualDescriptions[manualDescriptionIndex].description_ua,
+				description: manualDescriptions[manualDescriptionIndex].description_ua,
 				producer,
-				category:
-					category[language][0].length === undefined
-						? [category[language][0]]
-						: category[language][0],
-				images: imagesUrl(images, language, aliases).filter(
-					(img, index, array) =>
-						index < 13 || index === array.length - 1
-				),
+				category: category[language][0].length === undefined ? [category[language][0]] : category[language][0],
+				images: imagesUrl(images, language, producer).filter((img, index, array) => index < 13 || index === array.length - 1),
 				price: sellPrice[language].price,
-				url: productUrl(url, language, aliases),
+				url: productUrl(url, language, producer),
 				attributes: filteredAttributes,
 			};
 		})
@@ -121,11 +58,7 @@ const rozetkaFeed = async (
 		.map((cat) => cat.category)
 		.flat()
 		.reduce((previousValue, currentValue) => {
-			const index = previousValue.findIndex(
-				(prev) =>
-					prev.id === currentValue.id &&
-					prev.parentId === currentValue.parentId
-			);
+			const index = previousValue.findIndex((prev) => prev.id === currentValue.id && prev.parentId === currentValue.parentId);
 
 			if (index === -1) return [...previousValue, currentValue];
 
@@ -183,10 +116,7 @@ const rozetkaXmlSchema = (data, root) => {
 				.txt(category.name)
 				.up();
 		} else {
-			categoryElement
-				.ele('category', { id: category.id })
-				.txt(category.name)
-				.up();
+			categoryElement.ele('category', { id: category.id }).txt(category.name).up();
 		}
 	});
 
@@ -215,70 +145,34 @@ const rozetkaXmlSchema = (data, root) => {
 
 		product.images.forEach((med) => offer.ele('picture').txt(med).up());
 
-		offer
-			.ele('vendor')
-			.txt(product.producer)
-			.up()
-			.ele('stock_quantity')
-			.txt(product.stock)
-			.up()
-			.ele('name')
-			.txt(product.title)
-			.up()
-			.ele('description')
-			.dat(product.description)
-			.up();
+		offer.ele('vendor').txt(product.producer).up().ele('stock_quantity').txt(product.stock).up().ele('name').txt(product.title).up().ele('description').dat(product.description).up();
 		product.attributes.forEach((attribute) => {
 			if (attribute.name === '*Wysyłamy w: 24h*') return;
-			offer
-				.ele('param', { name: attribute.name })
-				.txt(attribute.value)
-				.up();
+			offer.ele('param', { name: attribute.name }).txt(attribute.value).up();
 		});
 	});
 	return rootElement;
 };
 
-const rozetkaGoogleSheets = (data, aliases) => {
+const rozetkaGoogleSheets = (data, config) => {
 	return new Promise(async (resolve) => {
-		await connectToGoogleSheets(
-			'1gZOIB2o8RRah4R3xrX_6t1DupbqUF1VQefnQ5CNfGWM'
-		).then(async (document) => {
-			const sheet = await document.sheetsByTitle['ROZETKA'];
+		await connectToGoogleSheets('1gZOIB2o8RRah4R3xrX_6t1DupbqUF1VQefnQ5CNfGWM').then(async (document) => {
+			const sheet = await document.sheetsByTitle.ROZETKA;
 			const rows = await sheet.getRows();
 			const sheetData = rows.map((row) => {
 				return row.toObject();
 			});
 
-			const products = excludedFilter(
-				aliasesFilter(data, aliases),
-				data.options
-			)
+			const products = prepareProducts(data, {
+				minStock: 0,
+				onlyActiveProducts: false,
+				...config,
+			})
 				.map((product) => {
-					const {
-						id,
-						active,
-						variantId,
-						activeVariant,
-						sku,
-						producer,
-						title,
-						description,
-						weight,
-						sellPrice,
-						stock,
-					} = product;
-					if (sku === '') return;
-					if (variantId === '') return;
-					if (!activeVariant) return;
-					if (!active) return;
+					const { id, variantId, sku, producer, title, description, weight, sellPrice, stock } = product;
 
-					const existing = sheetData.filter(
-						(item) => item.sku === sku
-					);
-					const priceInEur = parseFloat(
-						calculatePrice(sellPrice.uk.price, weight, 43.41, 0)
-					);
+					const existing = sheetData.filter((item) => item.sku === sku);
+					const priceInEur = parseFloat(calculatePrice(sellPrice.uk.price, weight, 43.41, 0));
 					if (existing.length === 0)
 						return {
 							id,
@@ -290,11 +184,7 @@ const rozetkaGoogleSheets = (data, aliases) => {
 							weight,
 							title_pl: title.pl,
 							title_ua: '',
-							description_pl: getDescription(
-								description,
-								'pl',
-								producer
-							),
+							description_pl: getDescription(description, 'pl', producer),
 							description_ua: '',
 						};
 
@@ -309,11 +199,7 @@ const rozetkaGoogleSheets = (data, aliases) => {
 							weight,
 							title_pl: title.pl,
 							title_ua: existing[0].title_ua,
-							description_pl: getDescription(
-								description,
-								'pl',
-								producer
-							),
+							description_pl: getDescription(description, 'pl', producer),
 							description_ua: existing[0].description_ua,
 						};
 					return {
@@ -326,11 +212,7 @@ const rozetkaGoogleSheets = (data, aliases) => {
 						weight,
 						title_pl: title.pl,
 						title_ua: '',
-						description_pl: getDescription(
-							description,
-							'pl',
-							producer
-						),
+						description_pl: getDescription(description, 'pl', producer),
 						description_ua: '',
 					};
 				})
@@ -353,18 +235,10 @@ export const generateRozetkaFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
 		for await (const language of config.languages) {
 			await rozetkaFeed(products, language, config).then(async (data) => {
-				await xmlBuilider(data, rozetkaXmlSchema).then(
-					async (xml) =>
-						await saveFeedFileToDisk(
-							xml,
-							'rozetka',
-							'xml',
-							'../generate/feed/'
-						)
-				);
+				await xmlBuilider(data, rozetkaXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'rozetka', 'xml', '../generate/feed/'));
 			});
 		}
-		// await rozetkaGoogleSheets(products, config.aliases);
+		await rozetkaGoogleSheets(products, config);
 		resolve();
 	});
 };

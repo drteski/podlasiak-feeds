@@ -1,26 +1,20 @@
 import axios from 'axios';
-import util from 'util';
-import {
-	connectToGoogleSheets,
-	getDataFromSheets,
-} from '../../../utilities/googleSheets.js';
-import { productsChunker } from './../../processFeed.js';
+import { connectToGoogleSheets, getDataFromSheets } from '../../../utilities/googleSheets.js';
+import { productsChunker } from '../../processFeed.js';
+
 const getProductsData = () => {
 	return new Promise(async (resolve, reject) => {
 		const products = await Promise.all(
 			Array.from(Array(100).keys()).map((page) => {
 				return axios
-					.get(
-						`https://merchants-api.fyndiq.se/api/v1/articles?limit=1000&page=${page + 1}`,
-						{
-							headers: {
-								'Content-Type': 'application/json',
-								Authorization: `Basic {${Buffer.from('759bd092-1546-4a08-9cd8-fc4c2c43723b:78f3dd86-8f41-48db-a948-076e5a2bb87d').toString('base64')}}`,
-							},
-						}
-					)
+					.get(`https://merchants-api.fyndiq.se/api/v1/articles?limit=1000&page=${page + 1}`, {
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Basic {${Buffer.from('759bd092-1546-4a08-9cd8-fc4c2c43723b:78f3dd86-8f41-48db-a948-076e5a2bb87d').toString('base64')}}`,
+						},
+					})
 					.then((res) => res.data)
-					.catch((error) => reject());
+					.catch(() => reject());
 			})
 		);
 		resolve(
@@ -34,13 +28,9 @@ const getProductsData = () => {
 
 const getCdonData = (data) => {
 	return new Promise(async (resolve, reject) => {
-		const cdon = await connectToGoogleSheets(
-			'1KY8oPlIqkJN5oXuPe5ndYePYN1zsybMLgQdlfOwJ1Ro'
-		)
-			.then((document) =>
-				getDataFromSheets(document, 'feed CDON').then((data) => data)
-			)
-			.catch((error) => reject());
+		const cdon = await connectToGoogleSheets('1KY8oPlIqkJN5oXuPe5ndYePYN1zsybMLgQdlfOwJ1Ro')
+			.then((document) => getDataFromSheets(document, 'feed CDON').then((data) => data))
+			.catch(() => reject());
 		resolve({ cdon, products: data });
 	});
 };
@@ -50,13 +40,8 @@ const checkExistingProducts = (data) => {
 		resolve(
 			data.products
 				.map((product) => {
-					const existingPrice = data.cdon.filter(
-						(price) =>
-							price.sku.toLowerCase() ===
-							product.sku.toLowerCase()
-					);
-					if (existingPrice.length !== 0)
-						return { ...product, ...existingPrice[0] };
+					const existingPrice = data.cdon.filter((price) => price.sku.toLowerCase() === product.sku.toLowerCase());
+					if (existingPrice.length !== 0) return { ...product, ...existingPrice[0] };
 					return null;
 				})
 				.filter(Boolean)
@@ -69,7 +54,7 @@ const pushNewProducts = (data) => {
 		const products = data.map((product) => ({
 			sku: product.sku,
 			status: 'for sale',
-			quantity: parseInt(product.stock),
+			quantity: parseInt(product.stock, 10),
 			categories: [product.category],
 			brand: product.brand,
 			gtin: product.gtin,
@@ -108,9 +93,7 @@ const pushNewProducts = (data) => {
 				{
 					market: 'SE',
 					value: {
-						amount:
-							parseFloat(product.salePriceSe) /
-							(1 + parseFloat(product.vatSe) / 100),
+						amount: parseFloat(product.salePriceSe) / (1 + parseFloat(product.vatSe) / 100),
 						amount_including_vat: parseFloat(product.salePriceSe),
 						currency: 'SEK',
 						vat_rate: parseFloat(product.vatSe) / 100,
@@ -119,9 +102,7 @@ const pushNewProducts = (data) => {
 				{
 					market: 'DK',
 					value: {
-						amount:
-							parseFloat(product.salePriceDk) /
-							(1 + parseFloat(product.vatDk) / 100),
+						amount: parseFloat(product.salePriceDk) / (1 + parseFloat(product.vatDk) / 100),
 						amount_including_vat: parseFloat(product.salePriceDk),
 						currency: 'DKK',
 						vat_rate: parseFloat(product.vatDk) / 100,
@@ -130,12 +111,8 @@ const pushNewProducts = (data) => {
 				{
 					market: 'FI',
 					value: {
-						amount:
-							parseFloat(product.originalPriceFi) /
-							(1 + parseFloat(product.vatFi) / 100),
-						amount_including_vat: parseFloat(
-							product.originalPriceFi
-						),
+						amount: parseFloat(product.originalPriceFi) / (1 + parseFloat(product.vatFi) / 100),
+						amount_including_vat: parseFloat(product.originalPriceFi),
 						currency: 'EUR',
 						vat_rate: parseFloat(product.vatFi) / 100,
 					},
@@ -145,12 +122,8 @@ const pushNewProducts = (data) => {
 				{
 					market: 'SE',
 					value: {
-						amount:
-							parseFloat(product.originalPriceSe) /
-							(1 + parseFloat(product.vatSe) / 100),
-						amount_including_vat: parseFloat(
-							product.originalPriceSe
-						),
+						amount: parseFloat(product.originalPriceSe) / (1 + parseFloat(product.vatSe) / 100),
+						amount_including_vat: parseFloat(product.originalPriceSe),
 						currency: 'SEK',
 						vat_rate: parseFloat(product.vatSe) / 100,
 					},
@@ -158,12 +131,8 @@ const pushNewProducts = (data) => {
 				{
 					market: 'DK',
 					value: {
-						amount:
-							parseFloat(product.originalPriceDk) /
-							(1 + parseFloat(product.vatDk) / 100),
-						amount_including_vat: parseFloat(
-							product.originalPriceDk
-						),
+						amount: parseFloat(product.originalPriceDk) / (1 + parseFloat(product.vatDk) / 100),
+						amount_including_vat: parseFloat(product.originalPriceDk),
 						currency: 'DKK',
 						vat_rate: parseFloat(product.vatDk) / 100,
 					},
@@ -171,12 +140,8 @@ const pushNewProducts = (data) => {
 				{
 					market: 'FI',
 					value: {
-						amount:
-							parseFloat(product.originalPriceFi) /
-							(1 + parseFloat(product.vatFi) / 100),
-						amount_including_vat: parseFloat(
-							product.originalPriceFi
-						),
+						amount: parseFloat(product.originalPriceFi) / (1 + parseFloat(product.vatFi) / 100),
+						amount_including_vat: parseFloat(product.originalPriceFi),
 						currency: 'EUR',
 						vat_rate: parseFloat(product.vatFi) / 100,
 					},
@@ -204,16 +169,12 @@ const pushNewProducts = (data) => {
 		const chunks = productsChunker(products, 100);
 		chunks.map(async (chunk) => {
 			await axios
-				.post(
-					`https://merchants-api.fyndiq.se/api/v1/articles/bulk`,
-					chunk,
-					{
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Basic {${Buffer.from('759bd092-1546-4a08-9cd8-fc4c2c43723b:78f3dd86-8f41-48db-a948-076e5a2bb87d').toString('base64')}}`,
-						},
-					}
-				)
+				.post(`https://merchants-api.fyndiq.se/api/v1/articles/bulk`, chunk, {
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Basic {${Buffer.from('759bd092-1546-4a08-9cd8-fc4c2c43723b:78f3dd86-8f41-48db-a948-076e5a2bb87d').toString('base64')}}`,
+					},
+				})
 				.then((res) => res.data)
 				.catch((error) => reject());
 		});
@@ -294,9 +255,7 @@ const pushPricesAndStock = (data) => {
 								{
 									market: 'FI',
 									value: {
-										amount: parseFloat(
-											product.originalPriceFi
-										),
+										amount: parseFloat(product.originalPriceFi),
 										currency: 'EUR',
 									},
 								},
@@ -305,27 +264,21 @@ const pushPricesAndStock = (data) => {
 								{
 									market: 'SE',
 									value: {
-										amount: parseFloat(
-											product.originalPriceSe
-										),
+										amount: parseFloat(product.originalPriceSe),
 										currency: 'SEK',
 									},
 								},
 								{
 									market: 'DK',
 									value: {
-										amount: parseFloat(
-											product.originalPriceDk
-										),
+										amount: parseFloat(product.originalPriceDk),
 										currency: 'DKK',
 									},
 								},
 								{
 									market: 'FI',
 									value: {
-										amount: parseFloat(
-											product.originalPriceFi
-										),
+										amount: parseFloat(product.originalPriceFi),
 										currency: 'EUR',
 									},
 								},
@@ -346,16 +299,12 @@ const pushPricesAndStock = (data) => {
 		const chunks = productsChunker(products, 200);
 		chunks.map(async (chunk) => {
 			await axios
-				.put(
-					`https://merchants-api.fyndiq.se/api/v1/articles/bulk`,
-					chunk,
-					{
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Basic {${Buffer.from('759bd092-1546-4a08-9cd8-fc4c2c43723b:78f3dd86-8f41-48db-a948-076e5a2bb87d').toString('base64')}}`,
-						},
-					}
-				)
+				.put(`https://merchants-api.fyndiq.se/api/v1/articles/bulk`, chunk, {
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Basic {${Buffer.from('759bd092-1546-4a08-9cd8-fc4c2c43723b:78f3dd86-8f41-48db-a948-076e5a2bb87d').toString('base64')}}`,
+					},
+				})
 				.then((res) => res.data)
 				.catch((error) => reject());
 		});

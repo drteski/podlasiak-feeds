@@ -1,35 +1,9 @@
-import {
-	aliasesFilter,
-	excludedFilter,
-	saveFeedFileToDisk,
-} from '../../processFeed.js';
+import { prepareProducts, saveFeedFileToDisk } from '../../processFeed.js';
 
-const pricesCatalogFeed = async (
-	data,
-	languages,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const products = excludedFilter(aliasesFilter(data, aliases), options)
+const pricesCatalogFeed = async (data, languages, options) => {
+	const products = prepareProducts(data, options)
 		.map((product) => {
-			const {
-				active,
-				id,
-				activeVariant,
-				variantId,
-				sku,
-				ean,
-				producer,
-				title,
-				sellPrice,
-			} = product;
-			if (variantId === '') return;
+			const { active, aliases, id, activeVariant, variantId, sku, ean, producer, title, sellPrice } = product;
 
 			const names = languages.map((lang) => {
 				if (lang === 'et') return { name: title[lang], lang: 'ee' };
@@ -95,10 +69,10 @@ const pricesCatalogFeed = async (
 			});
 
 			return {
-				uid: parseInt(`${id}${variantId}`),
-				id: parseInt(id),
+				uid: parseInt(`${id}${variantId}`, 10),
+				id: parseInt(id, 10),
 				active,
-				variantId: parseInt(variantId),
+				variantId: parseInt(variantId, 10),
 				activeVariant,
 				aliases,
 				sku,
@@ -114,15 +88,8 @@ const pricesCatalogFeed = async (
 
 export const generatePricesCatalogFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
-		await pricesCatalogFeed(products, config.languages, config).then(
-			async (data) => {
-				await saveFeedFileToDisk(
-					data,
-					'prices',
-					'json',
-					'../generate/feed/'
-				).then(() => resolve());
-			}
-		);
+		await pricesCatalogFeed(products, config.languages, config).then(async (data) => {
+			await saveFeedFileToDisk(data, 'prices', 'json', '../generate/feed/').then(() => resolve());
+		});
 	});
 };

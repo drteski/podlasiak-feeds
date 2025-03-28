@@ -1,14 +1,13 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import ftp from 'basic-ftp';
 import axios from 'axios';
 import fs from 'fs';
-import Product from '../models/Product.js';
 import builder from 'xmlbuilder2';
-import { currencyDefaults, newConfig } from '../config/config.js';
-import entities from '../data/entities.js';
 import ObjectsToCsv from 'objects-to-csv-file';
-import dotenv from 'dotenv';
-import ftp from 'basic-ftp';
-import path from 'path';
-import { subiektProducts } from '../controllers/updateFeeds.controller.js';
+import entities from '../data/entities.js';
+import { currencyDefaults, newConfig } from '../config/config.js';
+import Product from '../models/Product.js';
 
 dotenv.config({ path: '../.env' });
 
@@ -25,33 +24,23 @@ export const getCurrencyRates = async (currency) => {
 	});
 };
 
-export const getProducts = async () => {
+export const getProducts = async (subiektProducts) => {
 	return new Promise(async (resolve, reject) => {
 		const products = await Product.find().catch((error) => reject(error));
 
 		const data = products.map((product) => {
-			const {
-				uid,
-				id,
-				active,
-				variantId,
-				activeVariant,
-				sku,
-				ean,
-				weight,
-				stock,
-				producer,
-				aliases,
-				title,
-				description,
-				variantName,
-				basePrice,
-				sellPrice,
-				images,
-				category,
-				url,
-				attributes,
-			} = product;
+			const { uid, id, active, variantId, activeVariant, sku, ean, weight, stock, producer, aliases, title, description, variantName, basePrice, sellPrice, images, category, url, attributes } =
+				product;
+
+			const subiektProduct = subiektProducts.filter((sub) => sub.SKU.toLowerCase() === sku.toLowerCase());
+
+			const subiektStock = () => {
+				if (subiektProduct.length === 0) {
+					if (!active) return 0;
+					return stock;
+				}
+				return parseInt(subiektProduct[0]['Dostępne'], 10);
+			};
 			return {
 				uid,
 				id,
@@ -61,7 +50,7 @@ export const getProducts = async () => {
 				sku,
 				ean,
 				weight,
-				stock,
+				stock: subiektStock(),
 				producer,
 				aliases,
 				title: title[0],
@@ -77,12 +66,6 @@ export const getProducts = async () => {
 		});
 		resolve(data);
 	});
-};
-
-export const excludedFilter = (products, options) => {
-	// console.log(options?.exclude);
-	if (options?.exclude === undefined) return products;
-	return products.filter((product) => !options.exclude.includes(product.sku));
 };
 
 export const xmlBuilider = async (data, cb) => {
@@ -102,28 +85,16 @@ export const getStoreUrl = (lang, alias) => {
 	return store[0].urls.filter((url) => url.alias === alias)[0].url;
 };
 
-export const saveFeedFileToDisk = async (
-	data,
-	name,
-	format,
-	location,
-	delimiter = ';',
-	chunks = false
-) => {
+export const saveFeedFileToDisk = async (data, name, format, location, delimiter = ';', chunks = false) => {
 	return new Promise(async (resolve, reject) => {
 		const { products, language } = data;
 		if (!chunks) {
 			if (format === 'xml') {
-				await fs.writeFile(
-					`${location}${name}_${language}.${format}`,
-					products,
-					'utf8',
-					(error) => {
-						if (error) {
-							reject(error);
-						}
+				await fs.writeFile(`${location}${name}_${language}.${format}`, products, 'utf8', (error) => {
+					if (error) {
+						reject(error);
 					}
-				);
+				});
 			}
 			if (format === 'csv') {
 				const csv = new ObjectsToCsv(products);
@@ -132,27 +103,19 @@ export const saveFeedFileToDisk = async (
 				});
 			}
 			if (format === 'json') {
-				await fs.writeFile(
-					`${location}${name}_${language}.${format}`,
-					JSON.stringify(products),
-					'utf8',
-					(error) => {
-						if (error) {
-							reject(error);
-						}
+				await fs.writeFile(`${location}${name}_${language}.${format}`, JSON.stringify(products), 'utf8', (error) => {
+					if (error) {
+						reject(error);
 					}
-				);
+				});
 			}
 		} else {
 			if (format === 'csv') {
 				for await (const [index, chunk] of products.entries()) {
 					const csv = new ObjectsToCsv(chunk);
-					await csv.toDisk(
-						`${location}${name}_${language}_${index + 1}.${format}`,
-						{
-							delimiter,
-						}
-					);
+					await csv.toDisk(`${location}${name}_${language}_${index + 1}.${format}`, {
+						delimiter,
+					});
 				}
 			}
 		}
@@ -166,11 +129,8 @@ export const titleWithVariantName = (title, variantName) => {
 		.filter((word) => word !== '')
 		.map((word) => {
 			if (word === 'XL' || word === 'XXL' || word === 'XS') return word;
-			if (word.match(/app\d{1,}-\d{1,2}[a-z]{0,3}/gim))
-				return word.toUpperCase();
-			return (
-				word[0].toUpperCase() + word.slice(1, word.length).toLowerCase()
-			);
+			if (word.match(/app\d{1,}-\d{1,2}[a-z]{0,3}/gim)) return word.toUpperCase();
+			return word[0].toUpperCase() + word.slice(1, word.length).toLowerCase();
 		})
 		.join(' ');
 
@@ -180,21 +140,11 @@ export const titleWithVariantName = (title, variantName) => {
 		if (variantMatch.length < 2) {
 			if (variantMatch[0][0] !== '0') {
 				if (variantMatch[0].length !== 4) {
-					if (parseInt(variantMatch[0]) < 50) {
+					if (parseInt(variantMatch[0], 10) < 50) {
 						if (variantName.match(/\([\d]+\)/gm)) {
-							newVariantName = variantName
-								.replace(/\s\([\d]+\)/gm, '')
-								.replace(/\([\d]+\)/gm, '');
+							newVariantName = variantName.replace(/\s\([\d]+\)/gm, '').replace(/\([\d]+\)/gm, '');
 						}
-						if (
-							!isNaN(
-								parseInt(
-									variantName
-										.replace(' "N"', '')
-										.replace(' "n"', '')
-								)
-							)
-						) {
+						if (!isNaN(parseInt(variantName.replace(' "N"', '').replace(' "n"', ''), 10))) {
 							newVariantName = '';
 						} else {
 							newVariantName = variantName;
@@ -214,20 +164,16 @@ export const titleWithVariantName = (title, variantName) => {
 					if (variantName.match(/\d{1,}x\d{1,}x\d{1,}/gm)) {
 						newVariantName = variantName;
 					}
-					if (parseInt(variantMatch[0]) < 10)
-						newVariantName = variantName;
-					if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm))
-						newVariantName = variantName;
+					if (parseInt(variantMatch[0]) < 10) newVariantName = variantName;
+					if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm)) newVariantName = variantName;
 					newVariantName = variantMatch.join('x');
 				} else {
-					if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm))
-						newVariantName = variantName;
+					if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm)) newVariantName = variantName;
 					newVariantName = variantName;
 				}
 			} else {
 				if (variantMatch[0][0] === '0') newVariantName = variantName;
-				if (parseInt(variantMatch[0]) < 10)
-					newVariantName = variantName;
+				if (parseInt(variantMatch[0]) < 10) newVariantName = variantName;
 				newVariantName = variantMatch.join('x');
 			}
 		}
@@ -240,12 +186,8 @@ export const titleWithVariantName = (title, variantName) => {
 				.split(' ')
 				.filter((word) => word !== '')
 				.map((word) => {
-					if (word === 'XL' || word === 'XXL' || word === 'XS')
-						return word;
-					return (
-						word[0].toUpperCase() +
-						word.slice(1, word.length).toLowerCase()
-					);
+					if (word === 'XL' || word === 'XXL' || word === 'XS') return word;
+					return word[0].toUpperCase() + word.slice(1, word.length).toLowerCase();
 				})
 				.join(' ');
 		newVariantName = variantName;
@@ -276,9 +218,7 @@ export const shopifyCategoryTypes = (categories) => {
 		return categories[categories.length - 1].name;
 	} else {
 		if (categories[categories.length - 1].length === 0) return '';
-		return categories[categories.length - 1]
-			.map((cat) => cat.name)
-			.join(' > ');
+		return categories[categories.length - 1].map((cat) => cat.name).join(' > ');
 	}
 };
 
@@ -286,17 +226,14 @@ export const productsChunker = (products, chunks) => {
 	const totalFiles = Math.ceil(products.length / chunks);
 	const productsChunks = [];
 	for (let index = 0; index < totalFiles; index++) {
-		productsChunks.push(
-			products.slice(index * chunks, (index + 1) * chunks)
-		);
+		productsChunks.push(products.slice(index * chunks, (index + 1) * chunks));
 	}
 	return productsChunks;
 };
+
 export const aliasesFilter = (products, aliases) => {
 	return products
-		.filter((product) =>
-			product.aliases.some((alias) => aliases.includes(alias))
-		)
+		.filter((product) => product.aliases.some((alias) => aliases.includes(alias)))
 		.filter((product) => {
 			const { producer, aliases } = product;
 			switch (producer) {
@@ -331,66 +268,321 @@ export const aliasesFilter = (products, aliases) => {
 			}
 		});
 };
-export const productsFilter = (
+// export const productsFilter = (products, { activeProducts, activeVariants, minStock, emptySku = true, emptyVariant = true }) => {
+// 	return products
+// 		.map((product) => {
+// 			const { active, activeVariant, sku, stock, variantId } = product;
+// 			const subiektProduct = subiektProducts.filter((sub) => sub.SKU.toLowerCase() === sku.toLowerCase());
+//
+// 			const subiektStock = () => {
+// 				if (subiektProduct.length === 0) {
+// 					if (!active) return 0;
+// 					if (stock < minStock) return 0;
+// 					return stock;
+// 				} else {
+// 					return parseInt(subiektProduct[0]['Dostępne']) < minStock ? 0 : parseInt(subiektProduct[0]['Dostępne']);
+// 				}
+// 			};
+//
+// 			if (emptyVariant) {
+// 				if (variantId === '') return;
+// 			}
+// 			if (emptySku) {
+// 				if (sku === '') return;
+// 			}
+//
+// 			if (activeProducts) {
+// 				if (!active) return;
+// 			}
+//
+// 			if (activeVariants) {
+// 				if (!activeVariant) return;
+// 			}
+// 			return { stock: subiektStock(), ...product };
+// 		})
+// 		.filter(Boolean);
+// };
+
+export const excludedFilter = (products, options) => {
+	// console.log(options?.exclude);
+	if (options?.exclude === undefined) return products;
+	return products.filter((product) => !options.exclude.includes(product.sku));
+};
+
+export const prepareProducts = (
 	products,
-	{
-		activeProducts,
-		activeVariants,
-		minStock,
-		emptySku = true,
-		emptyVariant = true,
+	options = {
+		aliases: ['Rea', 'Tutumi', 'Toolight'],
+		onlyActiveProducts: false,
+		onlyActiveVariants: false,
+		emptySku: false,
+		emptyVariant: false,
+		emptyEan: false,
+		minStock: 0,
+		mu: null,
+		chunks: 0,
+		excluded: {
+			id: [],
+			variantId: [],
+			sku: [],
+			titles: [],
+			producers: [],
+		},
+		included: {
+			id: [],
+			variantId: [],
+			sku: [],
+		},
 	}
 ) => {
-	return products
-		.map((product) => {
-			const { active, activeVariant, sku, stock, variantId } = product;
-			const subiektProduct = subiektProducts.filter(
-				(sub) => sub.SKU.toLowerCase() === sku.toLowerCase()
-			);
+	const result = [];
 
-			const subiektStock = () => {
-				if (subiektProduct.length === 0) {
-					if (!active) return 0;
-					if (stock < minStock) return 0;
-					return stock;
-				} else {
-					return parseInt(subiektProduct[0]['Dostępne']) < minStock
-						? 0
-						: parseInt(subiektProduct[0]['Dostępne']);
+	const includedIds = new Set(options.included.id);
+	const includedVariantIds = new Set(options.included.variantId);
+	const includedSkus = new Set(options.included.sku);
+
+	const excludedIds = new Set(options.excluded.id);
+	const excludedVariantIds = new Set(options.excluded.variantId);
+	const excludedSkus = new Set(options.excluded.sku);
+	const excludedProducers = new Set(options.excluded.producers);
+	const aliasesSet = new Set(options.aliases);
+
+	const knownAliases = {
+		Tutumi: 'Tutumi',
+		FlexiFit: 'Tutumi',
+		Bluegarden: 'Tutumi',
+		PuppyJoy: 'Tutumi',
+		Kigu: 'Tutumi',
+		'Fluffy Glow': 'Tutumi',
+		Toolight: 'Toolight',
+		'Spectrum LED': 'Toolight',
+		Nowodvorski: 'Toolight',
+		Rea: 'Rea',
+		Quadron: 'Rea',
+		Calani: 'Rea',
+		Hadwao: 'Rea',
+	};
+
+	for (let i = 0; i < products.length; i++) {
+		const p = products[i];
+
+		const pid = parseInt(p.id, 10);
+		const vid = parseInt(p.variantId, 10);
+
+		if (excludedIds.has(pid)) continue;
+		if (excludedVariantIds.has(vid)) continue;
+		if (excludedSkus.has(p.sku)) continue;
+		if (options.excluded.titles.some((t) => p.title.pl.toLowerCase().includes(t))) continue;
+		if (excludedProducers.has(p.producer)) continue;
+
+		const hasInclusion = includedIds.size > 0 || includedVariantIds.size > 0 || includedSkus.size > 0;
+
+		if (hasInclusion) {
+			if (!includedIds.has(pid) && !includedVariantIds.has(vid) && !includedSkus.has(p.sku)) {
+				continue;
+			}
+		} else {
+			if (!p.aliases.some((alias) => aliasesSet.has(alias))) continue;
+		}
+
+		const expectedAlias = knownAliases[p.producer] || 'Rea';
+		if (!p.aliases.includes(expectedAlias)) continue;
+
+		if (options.onlyActiveProducts && !p.activeVariant) continue;
+		if (options.onlyActiveVariants && !p.active) continue;
+		if (!options.emptySku && !p.sku) continue;
+		if (!options.emptyVariant && !p.variantId) continue;
+		if (!options.emptyEan && !p.ean) continue;
+
+		const updatedProduct = { ...p, stock: p.stock < options.minStock ? 0 : p.stock };
+
+		if (options.mu !== null) {
+			const applyMu = (priceObj, mu) => {
+				const updated = {};
+				for (const key in priceObj) {
+					const price = parseFloat(priceObj[key].price);
+					const muValue = mu[key];
+					if (muValue === undefined) {
+						updated[key] = priceObj[key];
+					} else {
+						updated[key] = {
+							price: parseFloat((price * (1 + muValue / 100)).toFixed(2)),
+							tax: priceObj[key].tax,
+							currency: priceObj[key].currency,
+						};
+					}
 				}
+				return updated;
 			};
 
-			if (emptyVariant) {
-				if (variantId === '') return;
-			}
-			if (emptySku) {
-				if (sku === '') return;
-			}
+			updatedProduct.basePrice = applyMu(p.basePrice, options.mu);
+			updatedProduct.sellPrice = applyMu(p.sellPrice, options.mu);
+		}
 
-			if (activeProducts) {
-				if (!active) return;
-			}
+		result.push(updatedProduct);
+	}
 
-			if (activeVariants) {
-				if (!activeVariant) return;
-			}
-			return { stock: subiektStock(), ...product };
-		})
-		.filter(Boolean);
+	if (options.chunks <= 0) return result;
+
+	const chunks = [];
+	for (let i = 0; i < result.length; i += options.chunks) {
+		chunks.push(result.slice(i, i + options.chunks));
+	}
+
+	return chunks;
 };
+
+// export const prepareProducts = (
+// 	products,
+// 	options = {
+// 		aliases: ['Rea', 'Tutumi', 'Toolight'],
+// 		onlyActiveProducts: false,
+// 		onlyActiveVariants: false,
+// 		emptySku: false,
+// 		emptyVariant: false,
+// 		emptyEan: false,
+// 		minStock: 0,
+// 		mu: null,
+// 		chunks: 0,
+// 		excluded: {
+// 			id: [],
+// 			variantId: [],
+// 			sku: [],
+// 			titles: [],
+// 		},
+// 		included: {
+// 			id: [],
+// 			variantId: [],
+// 			sku: [],
+// 		},
+// 	}
+// ) => {
+// 	const data = products
+// 		.filter((product) => {
+// 			if (options.excluded.id.length === 0) return product;
+// 			return !options.excluded.id.includes(parseInt(product.id, 10));
+// 		})
+// 		.filter((product) => {
+// 			if (options.excluded.variantId.length === 0) return product;
+// 			return !options.excluded.variantId.includes(parseInt(product.variantId, 10));
+// 		})
+// 		.filter((product) => {
+// 			if (options.excluded.sku.length === 0) return product;
+// 			return !options.excluded.sku.includes(product.sku);
+// 		})
+// 		.filter((product) => {
+// 			if (options.excluded.titles.length === 0) return product;
+// 			return !options.excluded.titles.some((exclude) => product.title.pl.toLowerCase().includes(exclude));
+// 		})
+// 		.filter((product) => {
+// 			if (options.excluded.producers.length === 0) return product;
+// 			return !options.excluded.producers.includes(product.producer);
+// 		})
+// 		.filter((product) => {
+// 			if (options.included.id.length === 0 && options.included.variantId.length === 0 && options.included.sku.length === 0)
+// 				return product.aliases.some((alias) => options.aliases.includes(alias));
+//
+// 			const foundId = options.included.id.includes(parseInt(product.id, 10));
+// 			const foundVariantId = options.included.variantId.includes(parseInt(product.variantId, 10));
+// 			const foundSku = options.included.sku.includes(product.sku);
+//
+// 			return foundId || foundVariantId || foundSku;
+// 		})
+// 		.filter((product) => {
+// 			const { producer, aliases } = product;
+// 			switch (producer) {
+// 				case 'Tutumi':
+// 					return aliases.includes('Tutumi');
+// 				case 'FlexiFit':
+// 					return aliases.includes('Tutumi');
+// 				case 'Bluegarden':
+// 					return aliases.includes('Tutumi');
+// 				case 'PuppyJoy':
+// 					return aliases.includes('Tutumi');
+// 				case 'Kigu':
+// 					return aliases.includes('Tutumi');
+// 				case 'Fluffy Glow':
+// 					return aliases.includes('Tutumi');
+// 				case 'Toolight':
+// 					return aliases.includes('Toolight');
+// 				case 'Spectrum LED':
+// 					return aliases.includes('Toolight');
+// 				case 'Nowodvorski':
+// 					return aliases.includes('Toolight');
+// 				case 'Rea':
+// 					return aliases.includes('Rea');
+// 				case 'Quadron':
+// 					return aliases.includes('Rea');
+// 				case 'Calani':
+// 					return aliases.includes('Rea');
+// 				case 'Hadwao':
+// 					return aliases.includes('Rea');
+// 				default:
+// 					return aliases.includes('Rea');
+// 			}
+// 		})
+// 		.filter((product) => {
+// 			const { active, activeVariant, sku, ean, variantId } = product;
+// 			if (options.onlyActiveProducts) return activeVariant;
+// 			if (options.onlyActiveVariants) return active;
+// 			if (!options.emptySku) return sku !== '';
+// 			if (!options.emptyVariant) return variantId !== '';
+// 			if (!options.emptyEan) return ean !== '';
+// 			return false;
+// 		})
+// 		.map((product) => {
+// 			const { stock, basePrice, sellPrice } = product;
+//
+// 			if (options.mu !== null) {
+// 				const basePriceWithMu = {};
+// 				Object.entries(basePrice).forEach(([key, value]) => {
+// 					const muValue = options.mu[key];
+// 					if (muValue === undefined) basePriceWithMu[key] = value;
+// 					basePriceWithMu[key] = {
+// 						price: parseFloat((parseFloat(value.price) * ((100 + muValue) / 100)).toFixed(2)),
+// 						tax: value.tax,
+// 						currency: value.currency,
+// 					};
+// 				});
+//
+// 				const sellPriceWithMu = {};
+// 				Object.entries(sellPrice).forEach(([key, value]) => {
+// 					const muValue = options.mu[key];
+// 					if (muValue === undefined) sellPriceWithMu[key] = value;
+// 					sellPriceWithMu[key] = {
+// 						price: parseFloat((parseFloat(value.price) * ((100 + muValue) / 100)).toFixed(2)),
+// 						tax: value.tax,
+// 						currency: value.currency,
+// 					};
+// 				});
+// 				return {
+// 					stock: stock < options.minStock ? 0 : stock,
+// 					basePrice: basePriceWithMu,
+// 					sellPrice: sellPriceWithMu,
+// 					...product,
+// 				};
+// 			}
+//
+// 			return { stock: stock < options.minStock ? 0 : stock, ...product };
+// 		});
+// 	if (options.chunks === 0) return data;
+//
+// 	const totalFiles = Math.ceil(data.length / options.chunks);
+// 	const productsChunks = [];
+// 	for (let index = 0; index < totalFiles; index + 1) {
+// 		productsChunks.push(data.slice(index * options.chunks, (index + 1) * options.chunks));
+// 	}
+// 	return productsChunks;
+// };
+
 export const uploadFeeds = async (localFiles, bar) => {
-	return new Promise(async (resolve, reject) => {
+	return new Promise(async (resolve) => {
 		const client = new ftp.Client();
 		const dirSize = async (directory) => {
 			const files = fs.readdirSync(directory);
-			const stats = files.map((file) =>
-				fs.statSync(path.join(directory, file))
-			);
+			const stats = files.map((file) => fs.statSync(path.join(directory, file)));
 
-			return (await Promise.all(stats)).reduce(
-				(accumulator, { size }) => accumulator + size,
-				0
-			);
+			return (await Promise.all(stats)).reduce((accumulator, { size }) => accumulator + size, 0);
 		};
 		const size = await dirSize(localFiles);
 		const sizeInMB = Math.floor(parseFloat(size) / 1000000);
@@ -400,9 +592,7 @@ export const uploadFeeds = async (localFiles, bar) => {
 		});
 
 		client.trackProgress((info) => {
-			const currentProgress = Math.floor(
-				parseFloat(info.bytesOverall) / 1000000
-			);
+			const currentProgress = Math.floor(parseFloat(info.bytesOverall) / 1000000);
 			bar.update(currentProgress, {
 				dane: 'Przesyłanie do FTP',
 				additionalData: ` ${currentProgress}/${sizeInMB} Mb •`,
@@ -416,14 +606,12 @@ export const uploadFeeds = async (localFiles, bar) => {
 			password: FTP_PASS,
 			secure: false,
 		});
-		await client.uploadFromDir(localFiles, FTP_LOCATION).catch((error) => {
+		await client.uploadFromDir(localFiles, FTP_LOCATION).catch(() => {
 			return uploadFeeds(localFiles, bar);
 		});
-		await client
-			.uploadFromDir(localFiles, FTP_LOCATION + 'feeds')
-			.catch((error) => {
-				return uploadFeeds(localFiles, bar);
-			});
+		await client.uploadFromDir(localFiles, FTP_LOCATION + 'feeds').catch(() => {
+			return uploadFeeds(localFiles, bar);
+		});
 		bar.update(0, {
 			dane: 'Przesłano do FTP',
 			additionalData: ``,

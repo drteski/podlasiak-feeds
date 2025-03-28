@@ -11,10 +11,7 @@ import { generateToolightCatalogFeed } from '../services/feed/toolight-catalog/t
 import { generateBazzarFeed } from '../services/feed/bazzar/bazzarFeed.js';
 import { generateGalaxusFeed } from '../services/feed/galaxus/galaxusFeed.js';
 import { generateSkroutzFeed } from '../services/feed/skroutz/feedSkroutz.js';
-import {
-	generateSubiektFeed,
-	getSubiektProducts,
-} from '../services/feed/subiekt/subiektFeed.js';
+import { generateSubiektFeed, getSubiektProducts } from '../services/feed/subiekt/subiektFeed.js';
 import { generateCatalogPatrycjaFeed } from '../services/feed/catalog-patrycja/catalogPatrycjaFeed.js';
 import { generateCeneoFeed } from '../services/feed/ceneo/ceneoFeed.js';
 import { generateJeftinieFeed } from '../services/feed/jeftinie/jeftinieFeed.js';
@@ -26,42 +23,48 @@ import { generateBaselinkerFeed } from '../services/feed/baselinker/baselinkerFe
 import { generateAllPricesFeed } from '../services/feed/allPrices/allPricesFeed.js';
 import { generateFruugoFeed } from '../services/feed/fruugo/fruugoFeed.js';
 import { generateDomilampyPlFeed } from '../services/feed/shopify/domilampy_pl/domilampyPlFeed.js';
+import { generateDellahomeFrFeed } from '../services/feed/shopify/dellahome_fr/dellahomeFrFeed.js';
+import { generateDellahomePlFeed } from '../services/feed/shopify/dellahome_pl/dellahomePlFeed.js';
+import { generateBaiehomeRoFeed } from '../services/feed/shopify/baiehome_ro/baiehomeRoFeed.js';
+import { generateFurdoszobaplusHuFeed } from '../services/feed/shopify/furdoszobaplus_hu/furdoszobaplusHuFeed.js';
+import { generateBadezimmerperleDeFeed } from '../services/feed/shopify/badezimmerperle_de/badezimmerperleDeFeed.js';
+import { generateBasicFeed } from '../services/feed/basic/basicFeed.js';
 
 const feedGenerators = [
 	{ generator: generateDomilampyPlFeed, config: feedsConfig.domilampy_pl },
-	{ generator: generateGalaxusFeed, config: feedsConfig.galaxus },
 	{ generator: generateRozetkaFeed, config: feedsConfig.rozetka },
-	{ generator: generateAllPricesFeed, config: feedsConfig.allPrices },
+	{ generator: generatePepitaFeed, config: feedsConfig.pepita },
+	{ generator: generateSkroutzFeed, config: feedsConfig.skroutz },
+	{ generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
+	{ generator: generateDellahomeFrFeed, config: feedsConfig.dellahome_fr },
+	{ generator: generateDellahomePlFeed, config: feedsConfig.dellahome_pl },
+	{ generator: generateBaiehomeRoFeed, config: feedsConfig.baiehome_ro },
+	{ generator: generateBadezimmerperleDeFeed, config: feedsConfig.badezimmerperle_de },
+	{ generator: generateFurdoszobaplusHuFeed, config: feedsConfig.furdoshobaplus_hu },
+	{ generator: generateMdfFeed, config: feedsConfig.mdf },
+	{ generator: generateBazzarFeed, config: feedsConfig.bazzar },
 	{ generator: generateGoogleFeed, config: feedsConfig.google },
 	{ generator: generateBaselinkerFeed, config: feedsConfig.baselinker },
+	{ generator: generateAllPricesFeed, config: feedsConfig.allPrices },
+	{ generator: generateJeftinieFeed, config: feedsConfig.jeftinie },
 	{ generator: generatePricesCatalogFeed, config: feedsConfig.prices },
 	{ generator: generateCeneoFeed, config: feedsConfig.ceneo },
-	{ generator: generateBazzarFeed, config: feedsConfig.bazzar },
-	{ generator: generatePepitaFeed, config: feedsConfig.pepita },
-	{ generator: generateMatrixifyFeed, config: feedsConfig.matrixify },
-	{ generator: generateMdfFeed, config: feedsConfig.mdf },
-	{ generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
-	{ generator: generateSkroutzFeed, config: feedsConfig.skroutz },
-	{
-		generator: generateCatalogPatrycjaFeed,
-		config: feedsConfig.catalogPatrycja,
-	},
-	{ generator: generateFyndiqFeed, config: feedsConfig.fyndiq },
-	{ generator: generateBianoFeed, config: feedsConfig.biano },
-	{ generator: generateJeftinieFeed, config: feedsConfig.jeftinie },
-	{ generator: generateWszystkoFeed, config: feedsConfig.wszystko },
+	{ generator: generateCatalogPatrycjaFeed, config: feedsConfig.catalogPatrycja },
 	// { generator: generateFruugoFeed, config: feedsConfig.fruugo },
-	// {
-	// 	generator: generateToolightCatalogFeed,
-	// 	config: feedsConfig.toolightCatalog,
-	// },
+	{ generator: generateAtomstoreFeed, config: feedsConfig.atomstore },
+	// { generator: generateBasicFeed, config: feedsConfig.basic },
+	{ generator: generateBianoFeed, config: feedsConfig.biano },
+	{ generator: generateFyndiqFeed, config: feedsConfig.fyndiq },
+	{ generator: generateGalaxusFeed, config: feedsConfig.galaxus },
+	// { generator: generateToolightCatalogFeed, config: feedsConfig.toolightCatalog },
+	{ generator: generateWszystkoFeed, config: feedsConfig.wszystko },
 ];
 
-export const subiektProducts = await getSubiektProducts().then((data) => data);
+const subiektProducts = await getSubiektProducts().then((data) => data);
 
 export const generateFeeds = async (bar) => {
 	return new Promise(async (resolve, reject) => {
-		const products = await getProducts()
+		const products = await getProducts(subiektProducts)
 			.then((data) => data)
 			.catch((error) => reject(error));
 
@@ -82,16 +85,17 @@ export const generateFeeds = async (bar) => {
 			const { generator, config } = feedGenerator;
 			setTimeout(() => {}, 1000);
 			bar.update(progress.accumulator, {
-				dane: 'Generowanie ' + config.name,
+				dane: `Generowanie ${config.name}`,
 				additionalData: ` ${progress.accumulator}/${progress.count} •`,
 			});
 			setTimeout(() => {}, 1000);
 			await generator(products, config);
 			bar.update(progress.accumulator, {
-				dane: 'Zapisano ' + config.name,
+				dane: `Zapisano ${config.name}`,
 				additionalData: ` ${progress.accumulator}/${progress.count} •`,
 			});
 			setTimeout(() => {}, 1000);
+			// eslint-disable-next-line no-plusplus
 			progress.accumulator++;
 		}
 		bar.start(0, 1, {

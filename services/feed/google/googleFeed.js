@@ -1,62 +1,20 @@
-import {
-	aliasesFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-	excludedFilter,
-	xmlBuilider,
-} from '../../processFeed.js';
-import { format, formatISO } from 'date-fns';
-import { imagesUrl } from '../../../utilities/urls.js';
+import { saveFeedFileToDisk, xmlBuilider, prepareProducts } from '../../processFeed.js';
+import { formatISO } from 'date-fns';
+import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 import { getDescription } from '../../../utilities/descriptions.js';
-const googleFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const products = excludedFilter(aliasesFilter(data, aliases), options)
-		.map((product) => {
-			const {
-				id,
-				active,
-				variantId,
-				activeVariant,
-				sku,
-				ean,
-				stock,
-				producer,
-				weight,
-				category,
-				title,
-				description,
-				basePrice,
-				sellPrice,
-				images,
-				url,
-			} = product;
-			if (variantId === '') return;
-			if (sku === '') return;
-			if (weight >= 30) return;
-			if (!active) return;
-			if (!activeVariants) return;
 
-			const storeUrl = getStoreUrl(language, 'Rea');
+const googleFeed = async (data, language, options) => {
+	const products = prepareProducts(data, options)
+		.map((product) => {
+			const { id, sku, ean, stock, producer, weight, category, title, description, basePrice, sellPrice, images, url } = product;
+			if (weight >= 30) return;
+
 			const categoryPath =
 				category[language][0] === undefined
 					? ''
-					: category[language][category[language].length - 1]
-								.length !== undefined
-						? category[language][category[language].length - 1]
-								.map((cat) => cat.name)
-								.join(' > ')
-						: category[language][category[language].length - 1]
-								.name;
+					: category[language][category[language].length - 1].length !== undefined
+						? category[language][category[language].length - 1].map((cat) => cat.name).join(' > ')
+						: category[language][category[language].length - 1].name;
 			return {
 				id,
 				ean,
@@ -64,10 +22,10 @@ const googleFeed = async (
 				title: title[language],
 				description: getDescription(description, language, producer),
 				brand: producer,
-				url: storeUrl + url[language]['Rea'],
+				url: productUrl(url[language], language, producer),
 				stock,
 				category: categoryPath,
-				images: imagesUrl(images, language, aliases),
+				images: imagesUrl(images, language, producer),
 				price: sellPrice[language].price,
 				basePrice: basePrice[language].price,
 			};
@@ -178,16 +136,7 @@ export const generateGoogleFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
 		for await (const language of config.languages) {
 			await googleFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, googleXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'google',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, googleXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'google', 'xml', '../generate/feed/'))
 			);
 		}
 		resolve();

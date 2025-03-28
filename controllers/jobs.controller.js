@@ -1,9 +1,9 @@
-import { uploadProducts } from '../services/products/uploadProducts.js';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import { generateFeeds } from './updateFeeds.controller.js';
 import cliProgress from 'cli-progress';
 import ansiColors from 'ansi-colors';
+import { generateFeeds } from './updateFeeds.controller.js';
+import { uploadProducts } from '../services/products/uploadProducts.js';
 import { uploadFeeds } from '../services/processFeed.js';
 
 dotenv.config({ path: '../.env' });
@@ -55,12 +55,10 @@ const bar = new cliProgress.SingleBar({
 	hideCursor: true,
 });
 
-// while (true) {
-// await uploadProducts(bar)
-// 	.then(
-// 		async () =>
-await generateFeeds(bar)
-	.then(async () => await uploadFeeds('../generate/feed', bar))
-	.catch((error) => console.log(error));
-// )
+// await uploadProducts(bar).then(
+// 	async () =>
+
+await generateFeeds(bar);
+// .then(async () => uploadFeeds('../generate/feed', bar))
 // .catch((error) => console.log(error));
+// );

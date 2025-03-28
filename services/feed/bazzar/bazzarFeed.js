@@ -1,87 +1,25 @@
-import {
-	aliasesFilter,
-	getStoreUrl,
-	excludedFilter,
-	saveFeedFileToDisk,
-	xmlBuilider,
-} from '../../processFeed.js';
+import { prepareProducts, saveFeedFileToDisk, xmlBuilider } from '../../processFeed.js';
 import { getDescription } from '../../../utilities/descriptions.js';
 import { imagesUrl } from '../../../utilities/urls.js';
 
-const bazzarFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const products = excludedFilter(aliasesFilter(data, aliases), options)
+const bazzarFeed = async (data, language, options) => {
+	const products = prepareProducts(data, options)
 		.map((product) => {
-			const {
-				active,
-				activeVariant,
-				variantId,
-				title,
-				description,
-				sku,
-				stock,
-				ean,
-				producer,
-				weight,
-				category,
-				attributes,
-				images,
-				sellPrice,
-			} = product;
-			if (producer === '') return;
-
-			if (variantId === '') return;
-			if (activeProducts) {
-				if (!active) return;
-			}
-
-			if (activeVariants) {
-				if (!activeVariant) return;
-			}
-
-			if (stock < minStock) return;
-
-			if (ean === '' || !ean) return;
-
-			const specification = attributes[language]
-				.map((attr) => `${attr.name}: ${attr.value}`)
-				.join(' ');
+			const { title, description, sku, stock, ean, producer, weight, category, attributes, images, sellPrice } = product;
+			const specification = (Array.isArray(attributes[language]) ? attributes[language] : [attributes[language]]).map((attr) => `${attr.name}: ${attr.value}`).join(' ');
 
 			const calculatePrices = () => {
-				if (producer === 'Rea')
-					return `${Math.ceil(sellPrice[language].price / 1.25 / 1.25)}.00`;
-				if (
-					producer === 'Tutumi' ||
-					producer === 'FlexiFit' ||
-					producer === 'Bluegarden' ||
-					producer === 'PuppyJoy' ||
-					producer === 'Kigu' ||
-					producer === 'Fluffy Glow'
-				)
+				if (producer === 'Rea') return `${Math.ceil(sellPrice[language].price / 1.25 / 1.25)}.00`;
+				if (producer === 'Tutumi' || producer === 'FlexiFit' || producer === 'Bluegarden' || producer === 'PuppyJoy' || producer === 'Kigu' || producer === 'Fluffy Glow')
 					return `${Math.ceil(sellPrice['pl'].price / 1.23 / 4.34)}.00`;
-				if (producer === 'Toolight' || producer === 'Spectrum LED')
-					return `${Math.ceil(sellPrice[language].price / 1.25 / 1.25)}.00`;
+				if (producer === 'Toolight' || producer === 'Spectrum LED') return `${Math.ceil(sellPrice[language].price / 1.25 / 1.25)}.00`;
 			};
 			const categoryPath =
 				category[language][0] === undefined
 					? ''
-					: category[language][category[language].length - 1]
-								.length !== undefined
-						? category[language][category[language].length - 1]
-								.map((cat) => cat.name)
-								.join(', ')
-						: category[language][category[language].length - 1]
-								.name;
+					: category[language][category[language].length - 1].length !== undefined
+						? category[language][category[language].length - 1].map((cat) => cat.name).join(', ')
+						: category[language][category[language].length - 1].name;
 
 			if (categoryPath === '') return;
 			return {
@@ -96,7 +34,7 @@ const bazzarFeed = async (
 				price_mpc: calculatePrices(),
 				price_mpc_discount: calculatePrices(),
 				price_vpc: calculatePrices(),
-				images: imagesUrl(images, language, aliases),
+				images: imagesUrl(images, language, producer),
 				category: categoryPath,
 			};
 		})
@@ -167,16 +105,7 @@ export const generateBazzarFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
 		for await (const language of config.languages) {
 			await bazzarFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, bazzarXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'bazzar',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, bazzarXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'bazzar', 'xml', '../generate/feed/'))
 			);
 		}
 		resolve();

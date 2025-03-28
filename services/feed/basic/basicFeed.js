@@ -1,50 +1,11 @@
-import {
-	addMuToPrice,
-	aliasesFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-} from '../../processFeed.js';
+import { prepareProducts, saveFeedFileToDisk } from '../../processFeed.js';
 import { getDescription } from '../../../utilities/descriptions.js';
+import { imagesUrl } from '../../../utilities/urls.js';
 
-const basicFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const products = data
+const basicFeed = async (data, language, options) => {
+	const products = prepareProducts(data, options)
 		.map((product) => {
-			const {
-				active,
-				id,
-				activeVariant,
-				variantId,
-				sku,
-				ean,
-				weight,
-				stock,
-				producer,
-				aliases,
-				title,
-				description,
-				variantName,
-				basePrice,
-				sellPrice,
-				category,
-				url,
-				attributes,
-				images,
-			} = product;
-
-			if (sku === '') return;
-
-			const storeUrl = getStoreUrl(language, 'Rea');
+			const { id, variantId, sku, ean, weight, producer, title, description, variantName, basePrice, sellPrice, images } = product;
 
 			return {
 				id,
@@ -56,17 +17,10 @@ const basicFeed = async (
 				title: title[language],
 				description: getDescription(description, language, producer),
 				variantName: variantName[language],
-				sellPrice: addMuToPrice(sellPrice[language].price, mu),
+				sellPrice: sellPrice[language].price,
 				tax: basePrice[language].tax,
 				currency: basePrice[language].currency,
-				images: '',
-				...images.reduce(
-					(prev, curr, index) => ({
-						...prev,
-						[`img_${index + 1}`]: storeUrl + 'picture/' + curr,
-					}),
-					{}
-				),
+				images: imagesUrl(images, language, producer).join(';'),
 			};
 		})
 		.filter(Boolean);
@@ -77,12 +31,7 @@ export const generateBasicFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
 		for await (const language of config.languages) {
 			await basicFeed(products, language, config).then(async (data) => {
-				await saveFeedFileToDisk(
-					data,
-					'basic',
-					'csv',
-					'../generate/feed/'
-				);
+				await saveFeedFileToDisk(data, 'basic', 'csv', '../generate/feed/');
 			});
 		}
 		resolve();

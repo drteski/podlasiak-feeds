@@ -1,82 +1,32 @@
-import {
-	aliasesFilter,
-	excludedFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-	xmlBuilider,
-} from '../../processFeed.js';
+import { prepareProducts, saveFeedFileToDisk, xmlBuilider } from '../../processFeed.js';
 import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 import { getDescription } from '../../../utilities/descriptions.js';
 
-const jeftinieFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const products = excludedFilter(aliasesFilter(data, aliases), options)
+const jeftinieFeed = async (data, language, options) => {
+	const products = prepareProducts(data, options)
 		.map((product) => {
-			const {
-				active,
-				activeVariant,
-				variantId,
-				title,
-				description,
-				sku,
-				stock,
-				ean,
-				producer,
-				url,
-				category,
-				attributes,
-				images,
-				sellPrice,
-			} = product;
+			const { variantId, title, description, sku, stock, ean, producer, url, category, attributes, images, sellPrice } = product;
 
-			if (producer === '') return;
-			if (variantId === '') return;
-			if (activeProducts) {
-				if (!active) return;
-			}
-			if (activeVariants) {
-				if (!activeVariant) return;
-			}
-			if (stock < minStock) return;
-
-			const specification = attributes[language]
-				.map(
-					(attribute) =>
-						`<li>${attribute.name}: ${attribute.value}</li>`
-				)
-				.join('');
+			const specification = attributes[language].map((attribute) => `<li>${attribute.name}: ${attribute.value}</li>`).join('');
 
 			const categoryPath =
 				category[language][0] === undefined
 					? ''
-					: category[language][category[language].length - 1]
-								.length !== undefined
-						? category[language][category[language].length - 1].map(
-								(cat) => cat.name
-							)
+					: category[language][category[language].length - 1].length !== undefined
+						? category[language][category[language].length - 1].map((cat) => cat.name)
 						: category[language][category[language].length - 1];
 			return {
 				id: variantId,
 				name: title[language],
 				description: getDescription(description, language, producer),
-				link: productUrl(url, language, aliases),
+				link: productUrl(url, language, producer),
 				producer,
 				quantity: stock,
 				fileUnder: categoryPath[categoryPath.length - 1],
 				stock: stock > 0 ? 'in stock' : 'out of stock',
 				ean: !ean ? '' : ean,
 				price: sellPrice[language].price,
-				images: imagesUrl(images, language, aliases),
+				images: imagesUrl(images, language, producer),
 				productCode: sku,
 				specification,
 				attributes: attributes[language].map((attribute) => ({
@@ -93,9 +43,7 @@ const jeftinieFeed = async (
 };
 const jeftinieXmlSchema = (data, root) => {
 	const products = data;
-	const rootElement = root
-		.create({ version: '1.0', encoding: 'UTF-8' })
-		.ele('CNJExport');
+	const rootElement = root.create({ version: '1.0', encoding: 'UTF-8' }).ele('CNJExport');
 
 	products.forEach((product) => {
 		const itemFront = rootElement
@@ -129,9 +77,7 @@ const jeftinieXmlSchema = (data, root) => {
 			.up()
 			.ele('inStoreAvailability')
 			.ele('store')
-			.dat(
-				'Podlasiak Andrzej Cylwik Sp.K., Przędzalniana 6L, Białystok 15-688, Polska'
-			)
+			.dat('Podlasiak Andrzej Cylwik Sp.K., Przędzalniana 6L, Białystok 15-688, Polska')
 			.up()
 			.ele('availability')
 			.txt('today')
@@ -164,18 +110,7 @@ const jeftinieXmlSchema = (data, root) => {
 			.ele('attributes');
 
 		const attributeTags = () => {
-			return product.attributes.forEach((attribute) =>
-				itemFront
-					.ele('atribute')
-					.ele('name')
-					.dat(`${attribute.name}`)
-					.up()
-					.ele('values')
-					.ele('value')
-					.dat(`${attribute.value}`)
-					.up()
-					.up()
-			);
+			return product.attributes.forEach((attribute) => itemFront.ele('atribute').ele('name').dat(`${attribute.name}`).up().ele('values').ele('value').dat(`${attribute.value}`).up().up());
 		};
 
 		attributeTags();
@@ -187,16 +122,7 @@ export const generateJeftinieFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
 		for await (const language of config.languages) {
 			await jeftinieFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, jeftinieXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'jeftinie',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, jeftinieXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'jeftinie', 'xml', '../generate/feed/'))
 			);
 		}
 		resolve();
