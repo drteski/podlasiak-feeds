@@ -1,36 +1,14 @@
-import {
-	aliasesFilter,
-	excludedFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-	titleWithVariantName,
-	xmlBuilider,
-} from '../../processFeed.js';
+import { aliasesFilter, excludedFilter, getStoreUrl, saveFeedFileToDisk, titleWithVariantName, xmlBuilider } from '../../processFeed.js';
 import { skroutzCategories } from '../../../data/skroutzCategories.js';
 import timestamp from 'time-stamp';
-import {
-	connectToGoogleSheets,
-	getDataFromSheets,
-} from '../../../utilities/googleSheets.js';
+import { connectToGoogleSheets, getDataFromSheets } from '../../../utilities/googleSheets.js';
 import { format } from 'date-fns';
 import { imagesUrl } from '../../../utilities/urls.js';
 import { getDescription } from '../../../utilities/descriptions.js';
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
 
-const skroutzFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const skroutzCategoriesSheets = await connectToGoogleSheets(
-		'14Sr22z5Aic9yn75mC9AI6Rcnoy7Raxsptv6qkQQeyzc'
-	)
+const skroutzFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
+	const skroutzCategoriesSheets = await connectToGoogleSheets('14Sr22z5Aic9yn75mC9AI6Rcnoy7Raxsptv6qkQQeyzc')
 		.then((document) =>
 			getDataFromSheets(document, 'KATEGORIE').then((data) =>
 				data.map((item) => ({
@@ -45,17 +23,7 @@ const skroutzFeed = async (
 
 	const mappedProducts = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
-			const {
-				active,
-				id,
-				variantId,
-				activeVariant,
-				sku,
-				producer,
-				title,
-				variantName,
-				category,
-			} = product;
+			const { active, id, variantId, activeVariant, sku, producer, title, variantName, category } = product;
 			if (activeProducts) {
 				if (!active) return;
 			}
@@ -64,11 +32,7 @@ const skroutzFeed = async (
 			}
 			if (sku === '') return;
 			if (variantId === '') return;
-			const skroutzProduct = skroutzCategoriesSheets.filter(
-				(skroutz) =>
-					skroutz.id === parseInt(id) &&
-					skroutz.variantId === parseInt(variantId)
-			);
+			const skroutzProduct = skroutzCategoriesSheets.filter((skroutz) => skroutz.id === parseInt(id) && skroutz.variantId === parseInt(variantId));
 
 			if (skroutzProduct.length !== 0)
 				return {
@@ -89,12 +53,8 @@ const skroutzFeed = async (
 					category[language][0] === undefined
 						? ''
 						: category[language][0].length === undefined
-							? [category[language][0]]
-									.map((cat) => cat.name)
-									.join(' > ')
-							: category[language][0]
-									.map((cat) => cat.name)
-									.join(' > '),
+							? [category[language][0]].map((cat) => cat.name).join(' > ')
+							: category[language][0].map((cat) => cat.name).join(' > '),
 			};
 		})
 		.filter(Boolean)
@@ -103,41 +63,16 @@ const skroutzFeed = async (
 			if (a.nowe === '') return -1;
 		});
 
-	await connectToGoogleSheets(
-		'14Sr22z5Aic9yn75mC9AI6Rcnoy7Raxsptv6qkQQeyzc'
-	).then(async (document) => {
+	await connectToGoogleSheets('14Sr22z5Aic9yn75mC9AI6Rcnoy7Raxsptv6qkQQeyzc').then(async (document) => {
 		const sheet = await document.sheetsByTitle['KATEGORIE'];
-		await sheet.setHeaderRow([
-			'nowe',
-			'id',
-			'variantId',
-			'producer',
-			'title',
-			'category',
-			format(Date.now(), 'dd-MM-yyyy HH:mm:ss'),
-		]);
+		await sheet.setHeaderRow(['nowe', 'id', 'variantId', 'producer', 'title', 'category', format(Date.now(), 'dd-MM-yyyy HH:mm:ss')]);
 		await sheet.clearRows();
 		await sheet.addRows(mappedProducts);
 	});
 
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
-			const {
-				active,
-				variantId,
-				activeVariant,
-				sku,
-				ean,
-				weight,
-				stock,
-				producer,
-				title,
-				description,
-				variantName,
-				sellPrice,
-				images,
-				url,
-			} = product;
+			const { active, variantId, activeVariant, sku, ean, weight, stock, producer, title, description, variantName, sellPrice, images, url } = product;
 			if (activeProducts) {
 				if (!active) return;
 			}
@@ -147,19 +82,13 @@ const skroutzFeed = async (
 			if (sku === '') return;
 			if (variantId === '') return;
 
-			const newTitle = titleWithVariantName(
-				title[language],
-				variantName[language]
-			);
+			const newTitle = titleWithVariantName(title[language], variantName[language]);
 			if (newTitle.toLowerCase().includes('allegro')) return;
 			if (newTitle.toLowerCase().includes('do usuniecia')) return;
 			if (newTitle.toLowerCase().includes('do usunięcia')) return;
 			if (newTitle.toLowerCase().includes('usuwamy')) return;
 
-			const currentCategory = skroutzCategories.filter(
-				(category) =>
-					parseInt(category.variantId) === parseInt(variantId)
-			);
+			const currentCategory = skroutzCategories.filter((category) => parseInt(category.variantId) === parseInt(variantId));
 
 			if (currentCategory.length === 0) return;
 
@@ -192,26 +121,10 @@ const skroutzFeed = async (
 };
 const skroutzXmlSchema = (data, root) => {
 	const products = data;
-	const rootElement = root
-		.create({ version: '1.0', encoding: 'UTF-8' })
-		.ele('rea')
-		.ele('created_at')
-		.txt(timestamp('DD-MM-YYYY HH:mm'))
-		.up()
-		.ele('products');
+	const rootElement = root.create({ version: '1.0', encoding: 'UTF-8' }).ele('rea').ele('created_at').txt(timestamp('DD-MM-YYYY HH:mm')).up().ele('products');
 
 	products.forEach((product) => {
-		const itemFront = rootElement
-			.ele('product')
-			.ele('id')
-			.txt(`${product.id}`)
-			.up()
-			.ele('name')
-			.dat(`${product.name}`)
-			.up()
-			.ele('link')
-			.dat(`${product.link}`)
-			.up();
+		const itemFront = rootElement.ele('product').ele('id').txt(`${product.id}`).up().ele('name').dat(`${product.name}`).up().ele('link').dat(`${product.link}`).up();
 		product.additionalimage.forEach((img, index) => {
 			if (index === 0) return itemFront.ele('image').dat(`${img}`).up();
 			return itemFront.ele('additionalimage').dat(`${img}`).up();
@@ -256,20 +169,14 @@ const skroutzXmlSchema = (data, root) => {
 
 export const generateSkroutzFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
 		for await (const language of config.languages) {
 			await skroutzFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, skroutzXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'skroutz',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, skroutzXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'skroutz', 'xml', '../generate/feed/'))
 			);
 		}
+		await runFeedGenerator(config.name, true);
 		resolve();
 	});
 };

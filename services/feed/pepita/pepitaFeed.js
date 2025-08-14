@@ -1,48 +1,17 @@
 import dotenv from 'dotenv';
-import {
-	addMuToPrice,
-	aliasesFilter,
-	excludedFilter,
-	getStoreUrl,
-	replaceEntities,
-	saveFeedFileToDisk,
-	xmlBuilider,
-} from '../../processFeed.js';
+import { aliasesFilter, excludedFilter, getStoreUrl, saveFeedFileToDisk, xmlBuilider } from '../../processFeed.js';
 import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 import { getDescription } from '../../../utilities/descriptions.js';
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
+import { addMuToPrice } from '../../products/utils/addMuToPrice.js';
+import { replaceEntities } from '../../products/utils/replaceEntities.js';
 
 dotenv.config({ path: '../.env' });
 
-const pepitaFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+const pepitaFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
-			const {
-				active,
-				activeVariant,
-				variantId,
-				title,
-				description,
-				sku,
-				stock,
-				producer,
-				ean,
-				attributes,
-				url,
-				category,
-				images,
-				sellPrice,
-			} = product;
+			const { active, activeVariant, variantId, title, description, sku, stock, producer, ean, attributes, url, category, images, sellPrice } = product;
 			if (variantId === '') return;
 			if (activeProducts) {
 				if (!active) return;
@@ -55,38 +24,27 @@ const pepitaFeed = async (
 			if (stock < minStock) return;
 
 			if (ean === '' || !ean) return;
-
 			return {
 				variantId,
 				sku,
 				ean,
 				title: title[language],
-				description: replaceEntities(
-					getDescription(description, language, producer)
-				),
+				description: replaceEntities(getDescription(description, language, producer)),
 				price: addMuToPrice(sellPrice[language].price, mu),
 				currency: sellPrice[language].currency,
 				category:
-					category[language][category[language].length - 1].length ===
-					undefined
-						? category[language][category[language].length - 1].name
-						: category[language][category[language].length - 1][
-								category[language][
-									category[language].length - 1
-								].length - 1
-							].name,
-				images: imagesUrl(images, language, aliases).map(
-					(img, index) => ({
-						url: img,
-						main: index === 0,
-					})
-				),
+					category[language][0] === undefined
+						? ''
+						: category[language][category[language].length - 1].length !== undefined
+							? category[language][category[language].length - 1].map((cat) => cat.name).join(', ')
+							: category[language][category[language].length - 1].name,
+				images: imagesUrl(images, language, aliases).map((img, index) => ({
+					url: img,
+					main: index === 0,
+				})),
 				url: productUrl(url, language, aliases),
 				stock,
-				attributes:
-					attributes[language].length === undefined
-						? [attributes[language]]
-						: attributes[language],
+				attributes: attributes[language].length === undefined ? [attributes[language]] : attributes[language],
 			};
 		})
 		.filter(Boolean);
@@ -151,30 +109,14 @@ const pepitaXmlSchema = (data, root) => {
 			.ele('Photos');
 
 		product.images.forEach((img) => {
-			return offer
-				.ele('Photo')
-				.ele('Url')
-				.txt(img.url)
-				.up()
-				.ele('IsPrimary')
-				.txt(img.main)
-				.up()
-				.up();
+			return offer.ele('Photo').ele('Url').txt(img.url).up().ele('IsPrimary').txt(img.main).up().up();
 		});
 
 		const attributes = offer.up().ele('Attributes');
 
 		product.attributes.forEach((attribute) => {
 			if (attribute.name === 'Wariant opcji') return;
-			return attributes
-				.ele('Attribute')
-				.ele('AttributeName')
-				.txt(attribute.name)
-				.up()
-				.ele('AttributeValue')
-				.txt(attribute.value)
-				.up()
-				.up();
+			return attributes.ele('Attribute').ele('AttributeName').txt(attribute.name).up().ele('AttributeValue').txt(attribute.value).up().up();
 		});
 
 		attributes.up();
@@ -185,20 +127,14 @@ const pepitaXmlSchema = (data, root) => {
 
 export const generatePepitaFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
 		for await (const language of config.languages) {
 			await pepitaFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, pepitaXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'pepita',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, pepitaXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'pepita', 'xml', '../generate/feed/'))
 			);
 		}
+		await runFeedGenerator(config.name, true);
 		resolve();
 	});
 };

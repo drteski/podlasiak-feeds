@@ -1,34 +1,10 @@
-import {
-	aliasesFilter,
-	excludedFilter,
-	saveFeedFileToDisk,
-} from '../../processFeed.js';
+import { aliasesFilter, excludedFilter, saveFeedFileToDisk } from '../../processFeed.js';
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
 
-const pricesCatalogFeed = async (
-	data,
-	languages,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+const pricesCatalogFeed = async (data, languages, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
-			const {
-				active,
-				id,
-				activeVariant,
-				variantId,
-				sku,
-				ean,
-				producer,
-				title,
-				sellPrice,
-			} = product;
+			const { active, id, activeVariant, variantId, sku, ean, producer, title, sellPrice } = product;
 			if (variantId === '') return;
 
 			const names = languages.map((lang) => {
@@ -114,15 +90,12 @@ const pricesCatalogFeed = async (
 
 export const generatePricesCatalogFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
-		await pricesCatalogFeed(products, config.languages, config).then(
-			async (data) => {
-				await saveFeedFileToDisk(
-					data,
-					'prices',
-					'json',
-					'../generate/feed/'
-				).then(() => resolve());
-			}
-		);
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
+		await pricesCatalogFeed(products, config.languages, config).then(async (data) => {
+			await saveFeedFileToDisk(data, 'prices', 'json', '../generate/feed/');
+		});
+		await runFeedGenerator(config.name, true);
+		resolve();
 	});
 };

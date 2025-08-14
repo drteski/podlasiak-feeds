@@ -1,22 +1,13 @@
-import {
-	addMuToPrice,
-	aliasesFilter,
-	excludedFilter,
-	saveFeedFileToDisk,
-	titleWithVariantName,
-} from '../../processFeed.js';
-import {
-	connectToGoogleSheets,
-	getDataFromSheets,
-} from '../../../utilities/googleSheets.js';
-import { getFinalCategory } from '../../../utilities/category.js';
+import { aliasesFilter, excludedFilter, saveFeedFileToDisk, titleWithVariantName } from '../../processFeed.js';
+import { connectToGoogleSheets, getDataFromSheets } from '../../../utilities/googleSheets.js';
+import { getFinalCategory } from '../../products/utils/finalCategory.js';
 import { currencyDefaults } from '../../../config/config.js';
 import { getDescription } from '../../../utilities/descriptions.js';
 import { imagesUrl } from '../../../utilities/urls.js';
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
+import { addMuToPrice } from '../../products/utils/addMuToPrice.js';
 
-const pricesProducts = await connectToGoogleSheets(
-	'16uh5wfeEMKlhXKxUAZJs6RKWnuLmZ_BPio5fa3Hcow4'
-).then((document) =>
+const pricesProducts = await connectToGoogleSheets('16uh5wfeEMKlhXKxUAZJs6RKWnuLmZ_BPio5fa3Hcow4').then((document) =>
 	getDataFromSheets(document, 'cennik hurt - PL')
 		.then((data) => data)
 		.then((data) =>
@@ -27,9 +18,7 @@ const pricesProducts = await connectToGoogleSheets(
 		)
 );
 
-const pricesComponents = await connectToGoogleSheets(
-	'16uh5wfeEMKlhXKxUAZJs6RKWnuLmZ_BPio5fa3Hcow4'
-).then((document) =>
+const pricesComponents = await connectToGoogleSheets('16uh5wfeEMKlhXKxUAZJs6RKWnuLmZ_BPio5fa3Hcow4').then((document) =>
 	getDataFromSheets(document, 'KPL - hurt PL')
 		.then((data) => data)
 		.then((data) =>
@@ -40,49 +29,19 @@ const pricesComponents = await connectToGoogleSheets(
 		)
 );
 
-const galaxusWholesalePrices = [...pricesProducts, ...pricesComponents].filter(
-	(price) => price.sku !== ''
-);
+const productDimensions = await connectToGoogleSheets('10NytA_wrubR6CkdA63ppaySRfmzoZj8ZPCBcZU380gw').then((document) => getDataFromSheets(document, 'WYMIARY').then((data) => data));
 
-const galaxusCategories = await connectToGoogleSheets(
-	'181kkQgtmSgarZQf5iQBw5gTmJLSsbwIWzymR35Q8FX0'
-).then((document) =>
-	getDataFromSheets(document, 'MAPOWANIA').then((data) => data)
-);
+const galaxusWholesalePrices = [...pricesProducts, ...pricesComponents].filter((price) => price.sku !== '');
 
-const galaxusProductsFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+const galaxusCategories = await connectToGoogleSheets('181kkQgtmSgarZQf5iQBw5gTmJLSsbwIWzymR35Q8FX0').then((document) => getDataFromSheets(document, 'MAPOWANIA').then((data) => data));
+
+const galaxusProductsFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
-			const {
-				active,
-				activeVariant,
-				variantId,
-				sku,
-				ean,
-				weight,
-				stock,
-				producer,
-				title,
-				description,
-				variantName,
-			} = product;
+			const { active, activeVariant, variantId, sku, ean, weight, stock, producer, title, description, variantName } = product;
 			if (variantId === '') return;
 
-			const newTitle = titleWithVariantName(
-				title[language],
-				variantName[language]
-			);
+			const newTitle = titleWithVariantName(title[language], variantName[language]);
 			if (newTitle.toLowerCase().includes('allegro')) return;
 			if (newTitle.toLowerCase().includes('do usuniecia')) return;
 			if (newTitle.toLowerCase().includes('do usunięcia')) return;
@@ -96,15 +55,13 @@ const galaxusProductsFeed = async (
 
 			if (sku === '') return;
 
-			const galaxusExistingCategory = galaxusCategories.filter(
-				(category) => category.sku.toLowerCase() === sku.toLowerCase()
-			);
-			const galaxusExistingPrice = galaxusWholesalePrices.filter(
-				(price) => price.sku.toLowerCase() === sku.toLowerCase()
-			);
+			const galaxusExistingCategory = galaxusCategories.filter((category) => category.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingPrice = galaxusWholesalePrices.filter((price) => price.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingSpecs = productDimensions.filter((dimension) => dimension.sku.toLowerCase() === sku.toLowerCase());
+			if (galaxusExistingSpecs.length === 0) return;
+			if (galaxusExistingSpecs[0].length_package === undefined) return;
 			if (galaxusExistingCategory.length === 0) return;
-			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined)
-				return;
+			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined) return;
 			if (galaxusExistingPrice.length === 0) return;
 
 			return {
@@ -117,36 +74,19 @@ const galaxusProductsFeed = async (
 				CategoryGroup_4: galaxusExistingCategory[0].CategoryGroup_4,
 				ProductCategory: galaxusExistingCategory[0].ProductCategory,
 				Weight_g: weight,
-				ProductTitle_de: newTitle,
-				LongDescription_de: getDescription(
-					description,
-					language,
-					producer
-				),
+				ProductTitle_de: newTitle.replace(/\b[rR][eE][aA]\b/gi, ''),
+				LongDescription_de: getDescription(description, language, producer),
 			};
 		})
 		.filter(Boolean)
 		.reduce((previousValue, currentValue) => {
-			const prevIndex = previousValue.findIndex(
-				(prev) => prev.ProviderKey === currentValue.ProviderKey
-			);
+			const prevIndex = previousValue.findIndex((prev) => prev.ProviderKey === currentValue.ProviderKey);
 			if (prevIndex !== -1) return previousValue;
 			return [...previousValue, currentValue];
 		}, []);
 	return { products, language };
 };
-const galaxusPriceFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+const galaxusPriceFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const { active, activeVariant, variantId, sku, stock } = product;
@@ -161,48 +101,30 @@ const galaxusPriceFeed = async (
 
 			if (sku === '') return;
 
-			const galaxusExistingCategory = galaxusCategories.filter(
-				(category) => category.sku.toLowerCase() === sku.toLowerCase()
-			);
-			const galaxusExistingPrice = galaxusWholesalePrices.filter(
-				(price) => price.sku.toLowerCase() === sku.toLowerCase()
-			);
+			const galaxusExistingCategory = galaxusCategories.filter((category) => category.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingPrice = galaxusWholesalePrices.filter((price) => price.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingSpecs = productDimensions.filter((dimension) => dimension.sku.toLowerCase() === sku.toLowerCase());
+			if (galaxusExistingSpecs.length === 0) return;
+			if (galaxusExistingSpecs[0].length_package === undefined) return;
 			if (galaxusExistingCategory.length === 0) return;
-			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined)
-				return;
+			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined) return;
 			if (galaxusExistingPrice.length === 0) return;
 
 			return {
 				ProviderKey: sku,
-				SalesPriceExclVat_EUR: (
-					addMuToPrice(galaxusExistingPrice[0].price, mu) /
-					currencyDefaults.EUR
-				).toFixed(2),
+				SalesPriceExclVat_EUR: (addMuToPrice(galaxusExistingPrice[0].price, mu) / currencyDefaults.EUR).toFixed(2),
 				VatRatePercentage: 8.1,
 			};
 		})
 		.filter(Boolean)
 		.reduce((previousValue, currentValue) => {
-			const prevIndex = previousValue.findIndex(
-				(prev) => prev.ProviderKey === currentValue.ProviderKey
-			);
+			const prevIndex = previousValue.findIndex((prev) => prev.ProviderKey === currentValue.ProviderKey);
 			if (prevIndex !== -1) return previousValue;
 			return [...previousValue, currentValue];
 		}, []);
 	return { products, language };
 };
-const galaxusStockFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+const galaxusStockFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
 			const { active, activeVariant, variantId, sku, stock } = product;
@@ -218,15 +140,13 @@ const galaxusStockFeed = async (
 
 			if (sku === '') return;
 
-			const galaxusExistingCategory = galaxusCategories.filter(
-				(category) => category.sku.toLowerCase() === sku.toLowerCase()
-			);
-			const galaxusExistingPrice = galaxusWholesalePrices.filter(
-				(price) => price.sku.toLowerCase() === sku.toLowerCase()
-			);
+			const galaxusExistingCategory = galaxusCategories.filter((category) => category.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingPrice = galaxusWholesalePrices.filter((price) => price.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingSpecs = productDimensions.filter((dimension) => dimension.sku.toLowerCase() === sku.toLowerCase());
+			if (galaxusExistingSpecs.length === 0) return;
+			if (galaxusExistingSpecs[0].length_package === undefined) return;
 			if (galaxusExistingCategory.length === 0) return;
-			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined)
-				return;
+			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined) return;
 			if (galaxusExistingPrice.length === 0) return;
 
 			return {
@@ -236,31 +156,17 @@ const galaxusStockFeed = async (
 		})
 		.filter(Boolean)
 		.reduce((previousValue, currentValue) => {
-			const prevIndex = previousValue.findIndex(
-				(prev) => prev.ProviderKey === currentValue.ProviderKey
-			);
+			const prevIndex = previousValue.findIndex((prev) => prev.ProviderKey === currentValue.ProviderKey);
 			if (prevIndex !== -1) return previousValue;
 			return [...previousValue, currentValue];
 		}, []);
 	return { products, language };
 };
-const galaxusMediaFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+const galaxusMediaFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.sort((a, b) => a.images.length - b.images.length)
 		.map((product) => {
-			const { active, activeVariant, variantId, stock, sku, images } =
-				product;
+			const { active, activeVariant, variantId, stock, sku, images } = product;
 			if (variantId === '') return;
 
 			if (activeProducts) {
@@ -273,31 +179,26 @@ const galaxusMediaFeed = async (
 
 			if (sku === '') return;
 
-			const galaxusExistingCategory = galaxusCategories.filter(
-				(category) => category.sku.toLowerCase() === sku.toLowerCase()
-			);
-			const galaxusExistingPrice = galaxusWholesalePrices.filter(
-				(price) => price.sku.toLowerCase() === sku.toLowerCase()
-			);
+			const galaxusExistingCategory = galaxusCategories.filter((category) => category.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingPrice = galaxusWholesalePrices.filter((price) => price.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingSpecs = productDimensions.filter((dimension) => dimension.sku.toLowerCase() === sku.toLowerCase());
+			if (galaxusExistingSpecs.length === 0) return;
+			if (galaxusExistingSpecs[0].length_package === undefined) return;
 			if (galaxusExistingCategory.length === 0) return;
-			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined)
-				return;
+			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined) return;
 			if (galaxusExistingPrice.length === 0) return;
 
-			const media = imagesUrl(images, language, aliases).reduce(
-				(previousValue, currentValue, index) => {
-					if (index === 0)
-						return {
-							...previousValue,
-							MainImageURL: currentValue,
-						};
+			const media = imagesUrl(images, language, aliases).reduce((previousValue, currentValue, index) => {
+				if (index === 0)
 					return {
 						...previousValue,
-						[`ImageURL_${index}`]: currentValue,
+						MainImageURL: currentValue,
 					};
-				},
-				{}
-			);
+				return {
+					...previousValue,
+					[`ImageURL_${index}`]: currentValue,
+				};
+			}, {});
 
 			return {
 				ProviderKey: sku,
@@ -306,49 +207,70 @@ const galaxusMediaFeed = async (
 		})
 		.filter(Boolean)
 		.reduce((previousValue, currentValue) => {
-			const prevIndex = previousValue.findIndex(
-				(prev) => prev.ProviderKey === currentValue.ProviderKey
-			);
+			const prevIndex = previousValue.findIndex((prev) => prev.ProviderKey === currentValue.ProviderKey);
 			if (prevIndex !== -1) return previousValue;
 			return [...previousValue, currentValue];
 		}, []);
 	return { products, language };
 };
 
+const galaxusSpecificationFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
+	const products = excludedFilter(aliasesFilter(data, aliases), options)
+		.sort((a, b) => a.images.length - b.images.length)
+		.map((product) => {
+			const { active, activeVariant, variantId, stock, sku } = product;
+			if (variantId === '') return;
+
+			if (activeProducts) {
+				if (!active) return;
+			}
+			if (activeVariants) {
+				if (!activeVariant) return;
+			}
+			if (stock < minStock) return;
+
+			if (sku === '') return;
+
+			const galaxusExistingCategory = galaxusCategories.filter((category) => category.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingPrice = galaxusWholesalePrices.filter((price) => price.sku.toLowerCase() === sku.toLowerCase());
+			const galaxusExistingSpecs = productDimensions.filter((dimension) => dimension.sku.toLowerCase() === sku.toLowerCase());
+			if (galaxusExistingSpecs.length === 0) return;
+			if (galaxusExistingSpecs[0].length_package === undefined) return;
+			if (galaxusExistingCategory.length === 0) return;
+			if (galaxusExistingCategory[0].CategoryGroup_1 === undefined) return;
+			if (galaxusExistingPrice.length === 0) return;
+
+			return Object.entries(galaxusExistingSpecs[0]).reduce((previousValue, [currentKey, currentValue]) => {
+				if (currentKey === 'sku' || currentKey === 'length' || currentKey === 'width' || currentKey === 'height' || currentKey === 'weight_nett') return previousValue;
+				if (currentKey === 'weight_gross') return [...previousValue, { ProviderKey: sku, SpecificationKey: 'Gewicht', SpecificationValue: `${currentValue} kg` }];
+				if (currentKey === 'length_package') return [...previousValue, { ProviderKey: sku, SpecificationKey: 'Länge', SpecificationValue: `${currentValue} mm` }];
+				if (currentKey === 'width_package') return [...previousValue, { ProviderKey: sku, SpecificationKey: 'Breite', SpecificationValue: `${currentValue} mm` }];
+				if (currentKey === 'height_package') return [...previousValue, { ProviderKey: sku, SpecificationKey: 'Höhe', SpecificationValue: `${currentValue} mm` }];
+			}, []);
+		})
+		.flatMap((product) => product)
+		.filter(Boolean);
+
+	return { products, language };
+};
+
 const galaxusGoogleSheets = (data, aliases) => {
 	return new Promise(async (resolve) => {
-		await connectToGoogleSheets(
-			'181kkQgtmSgarZQf5iQBw5gTmJLSsbwIWzymR35Q8FX0'
-		).then(async (document) => {
+		await connectToGoogleSheets('181kkQgtmSgarZQf5iQBw5gTmJLSsbwIWzymR35Q8FX0').then(async (document) => {
 			const sheet = await document.sheetsByTitle['MAPOWANIA'];
 			const rows = await sheet.getRows();
 			const sheetData = rows.map((row) => {
 				return row.toObject();
 			});
 
-			const products = excludedFilter(
-				aliasesFilter(data, aliases),
-				data.options
-			)
+			const products = excludedFilter(aliasesFilter(data, aliases), data.options)
 				.map((product) => {
-					const {
-						id,
-						active,
-						variantId,
-						activeVariant,
-						sku,
-						producer,
-						title,
-						variantName,
-						category,
-					} = product;
+					const { id, active, variantId, activeVariant, sku, producer, title, variantName, category } = product;
 					if (sku === '') return;
 					if (variantId === '') return;
 					if (!activeVariant) return;
 
-					const existing = sheetData.filter(
-						(item) => item.sku === sku
-					);
+					const existing = sheetData.filter((item) => item.sku === sku);
 
 					if (existing.length === 0)
 						return {
@@ -416,49 +338,27 @@ const galaxusGoogleSheets = (data, aliases) => {
 
 export const generateGalaxusFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
 		for await (const language of config.languages) {
 			await galaxusGoogleSheets(products, config.aliases);
-			await galaxusProductsFeed(products, language, config).then(
-				async (data) => {
-					await saveFeedFileToDisk(
-						data,
-						'galaxus_products',
-						'csv',
-						'../generate/feed/'
-					);
-				}
-			);
-			await galaxusPriceFeed(products, language, config).then(
-				async (data) => {
-					await saveFeedFileToDisk(
-						data,
-						'galaxus_price',
-						'csv',
-						'../generate/feed/'
-					);
-				}
-			);
-			await galaxusStockFeed(products, language, config).then(
-				async (data) => {
-					await saveFeedFileToDisk(
-						data,
-						'galaxus_stock',
-						'csv',
-						'../generate/feed/'
-					);
-				}
-			);
-			await galaxusMediaFeed(products, language, config).then(
-				async (data) => {
-					await saveFeedFileToDisk(
-						data,
-						'galaxus_media',
-						'csv',
-						'../generate/feed/'
-					);
-				}
-			);
+			await galaxusProductsFeed(products, language, config).then(async (data) => {
+				await saveFeedFileToDisk(data, 'galaxus_products', 'csv', '../generate/feed/');
+			});
+			await galaxusPriceFeed(products, language, config).then(async (data) => {
+				await saveFeedFileToDisk(data, 'galaxus_price', 'csv', '../generate/feed/');
+			});
+			await galaxusStockFeed(products, language, config).then(async (data) => {
+				await saveFeedFileToDisk(data, 'galaxus_stock', 'csv', '../generate/feed/');
+			});
+			await galaxusMediaFeed(products, language, config).then(async (data) => {
+				await saveFeedFileToDisk(data, 'galaxus_media', 'csv', '../generate/feed/');
+			});
+			await galaxusSpecificationFeed(products, language, config).then(async (data) => {
+				await saveFeedFileToDisk(data, 'galaxus_specification', 'csv', '../generate/feed/');
+			});
 		}
+		await runFeedGenerator(config.name, true);
 		resolve();
 	});
 };

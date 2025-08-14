@@ -1,46 +1,14 @@
-import {
-	aliasesFilter,
-	excludedFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-	xmlBuilider,
-} from '../../processFeed.js';
+import { aliasesFilter, excludedFilter, getStoreUrl, saveFeedFileToDisk, xmlBuilider } from '../../processFeed.js';
 import { getSubiektProducts } from '../subiekt/subiektFeed.js';
 import { getDescription } from '../../../utilities/descriptions.js';
 import { imagesUrl } from '../../../utilities/urls.js';
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
 
-const baselinkerFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const subiektData = await getSubiektProducts().then((data) => data);
+const baselinkerFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
+	const subiektData = await getSubiektProducts();
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
-			const {
-				id,
-				active,
-				variantId,
-				activeVariant,
-				sku,
-				ean,
-				stock,
-				producer,
-				title,
-				variantName,
-				description,
-				sellPrice,
-				images,
-				weight,
-				attributes,
-			} = product;
+			const { id, active, variantId, activeVariant, sku, ean, stock, producer, title, variantName, description, sellPrice, images, weight, attributes } = product;
 			if (variantId === '') return;
 			if (sku === '') return;
 			if (activeProducts) {
@@ -67,14 +35,9 @@ const baselinkerFeed = async (
 					.replace('x1', ' x 1')
 					.replace('---', '');
 
-			const filteredAttributes = (
-				attributes[language].length === undefined
-					? [attributes[language]]
-					: attributes[language]
-			)
+			const filteredAttributes = (attributes[language].length === undefined ? [attributes[language]] : attributes[language])
 				.map((attribute) => {
-					if (attribute.value === '' || attribute.value === undefined)
-						return;
+					if (attribute.value === '' || attribute.value === undefined) return;
 					if (attribute.value === 'Wysyłamy w: 24h') return;
 					if (attribute.value === '*Wysyłamy w: 24h*') return;
 					return attribute;
@@ -83,9 +46,7 @@ const baselinkerFeed = async (
 
 			const storeUrl = getStoreUrl(language, 'Rea');
 
-			const subiektStock = subiektData.filter(
-				(subiektProduct) => subiektProduct.sku === sku
-			);
+			const subiektStock = subiektData.filter((subiektProduct) => subiektProduct.sku === sku);
 
 			return {
 				id,
@@ -158,10 +119,7 @@ const baselinkerXmlSchema = (data, root) => {
 		const itemImages = () => {
 			return product.images.forEach((image, index) => {
 				if (index === 0) return;
-				return itemFront
-					.ele(`image_extra_${index}`)
-					.txt(`${image}`)
-					.up();
+				return itemFront.ele(`image_extra_${index}`).txt(`${image}`).up();
 			});
 		};
 		itemImages();
@@ -169,15 +127,7 @@ const baselinkerXmlSchema = (data, root) => {
 		const itemEnd = itemFront.ele('attributes');
 		const itemAttributes = () => {
 			return product.attributes.forEach((attr) => {
-				return itemEnd
-					.ele('attribute')
-					.ele('attribute_name')
-					.txt(`${attr.name}`)
-					.up()
-					.ele('attribute_value')
-					.txt(`${attr.value}`)
-					.up()
-					.up();
+				return itemEnd.ele('attribute').ele('attribute_name').txt(`${attr.name}`).up().ele('attribute_value').txt(`${attr.value}`).up().up();
 			});
 		};
 		itemAttributes();
@@ -187,20 +137,14 @@ const baselinkerXmlSchema = (data, root) => {
 
 export const generateBaselinkerFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
 		for await (const language of config.languages) {
 			await baselinkerFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, baselinkerXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'baselinker',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, baselinkerXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'baselinker', 'xml', '../generate/feed/'))
 			);
 		}
+		await runFeedGenerator(config.name, true);
 		resolve();
 	});
 };

@@ -1,32 +1,12 @@
-import { aliasesFilter, excludedFilter } from '../../processFeed.js';
 import { connectToGoogleSheets } from '../../../utilities/googleSheets.js';
 import { format } from 'date-fns';
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
 
-const allPricesFeed = async (
-	data,
-	languages,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+const allPricesFeed = async (data, languages, {}) => {
 	return new Promise(async (resolve, reject) => {
-		const products = excludedFilter(aliasesFilter(data, aliases), options)
+		const products = data
 			.map((product) => {
-				const {
-					id,
-					active,
-					variantId,
-					activeVariant,
-					sku,
-					ean,
-					basePrice,
-					sellPrice,
-				} = product;
+				const { id, active, variantId, activeVariant, sku, ean, basePrice, sellPrice } = product;
 
 				const prices = languages
 					.map((language) => {
@@ -55,22 +35,18 @@ const allPricesFeed = async (
 
 export const generateAllPricesFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
-		await allPricesFeed(products, config.languages, config).then(
-			async (data) => {
-				await connectToGoogleSheets(
-					'1GYKRTUfJ-gYO4291-PNRoZVfUjdCllUs_cTK2rbe-4M'
-				).then(async (document) => {
-					const sheet = await document.sheetsByTitle['PRICES'];
-					const headers = Object.keys(data[0]);
-					await sheet.setHeaderRow([
-						format(Date.now(), 'dd-MM-yyyy HH:mm:ss'),
-						...headers,
-					]);
-					await sheet.clearRows();
-					await sheet.addRows(data);
-				});
-			}
-		);
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
+		await allPricesFeed(products, config.languages, config).then(async (data) => {
+			await connectToGoogleSheets('1GYKRTUfJ-gYO4291-PNRoZVfUjdCllUs_cTK2rbe-4M').then(async (document) => {
+				const sheet = await document.sheetsByTitle['PRICES'];
+				const headers = Object.keys(data[0]);
+				await sheet.setHeaderRow([format(Date.now(), 'dd-MM-yyyy HH:mm:ss'), ...headers]);
+				await sheet.clearRows();
+				await sheet.addRows(data);
+			});
+		});
+		await runFeedGenerator(config.name, true);
 		resolve();
 	});
 };

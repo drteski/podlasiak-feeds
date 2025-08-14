@@ -1,46 +1,13 @@
-import {
-	aliasesFilter,
-	excludedFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-	xmlBuilider,
-} from '../../processFeed.js';
-import { getFinalCategory } from '../../../utilities/category.js';
+import { aliasesFilter, excludedFilter, getStoreUrl, saveFeedFileToDisk, xmlBuilider } from '../../processFeed.js';
+import { getFinalCategory } from '../../products/utils/finalCategory.js';
 import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 import { getDescription } from '../../../utilities/descriptions.js';
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
 
-const ceneoFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+const ceneoFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
-			const {
-				active,
-				variantName,
-				activeVariant,
-				variantId,
-				title,
-				description,
-				sku,
-				stock,
-				ean,
-				producer,
-				weight,
-				category,
-				attributes,
-				images,
-				sellPrice,
-				url,
-			} = product;
+			const { active, variantName, activeVariant, variantId, title, description, sku, stock, ean, producer, weight, category, attributes, images, sellPrice, url } = product;
 			if (producer === '') return;
 
 			if (variantId === '') return;
@@ -49,17 +16,10 @@ const ceneoFeed = async (
 				if (!activeVariant) return;
 			}
 
-			const attributeArray =
-				attributes[language].length === undefined
-					? [attributes[language]]
-					: attributes[language];
+			const attributeArray = attributes[language].length === undefined ? [attributes[language]] : attributes[language];
 
 			const specification = attributeArray.filter((attribute) => {
-				if (
-					attribute.name !== 'Wariant opcji' ||
-					attribute.name !== 'Informacja o dostawie'
-				)
-					return attribute;
+				if (attribute.name !== 'Wariant opcji' || attribute.name !== 'Informacja o dostawie') return attribute;
 			});
 
 			const titleWithVariantName =
@@ -85,12 +45,7 @@ const ceneoFeed = async (
 				stock,
 				weight,
 				description: getDescription(description, language, producer),
-				specification: [
-					{ name: 'Producent', value: producer },
-					{ name: 'EAN', value: ean },
-					{ name: 'Kod producenta', value: sku },
-					...specification,
-				],
+				specification: [{ name: 'Producent', value: producer }, { name: 'EAN', value: ean }, { name: 'Kod producenta', value: sku }, ...specification],
 				url: productUrl(url, language, aliases),
 				price: sellPrice[language].price,
 				images: imagesUrl(images, language, aliases),
@@ -112,8 +67,8 @@ const ceneoXmlSchema = (data, root) => {
 		})
 		.ele('offers', {
 			'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-			version: '1',
-			name: 'other',
+			'version': '1',
+			'name': 'other',
 		})
 		.ele('responsibleProducers')
 		.ele('p', { id: 'Rea' })
@@ -165,29 +120,15 @@ const ceneoXmlSchema = (data, root) => {
 			.ele('images');
 
 		const images = () => {
-			return product.images.forEach((img, index) =>
-				index === 0
-					? start.ele('main', { url: img }).up()
-					: start.ele('i', { url: img }).up()
-			);
+			return product.images.forEach((img, index) => (index === 0 ? start.ele('main', { url: img }).up() : start.ele('i', { url: img }).up()));
 		};
 
 		images();
-		const end = start
-			.up()
-			.ele('attrs')
-			.ele('a', { name: 'Producent odpowiedzialny' })
-			.dat('Podlasiak Andrzej Cylwik Spółka Komandytowa')
-			.up();
+		const end = start.up().ele('attrs').ele('a', { name: 'Producent odpowiedzialny' }).dat('Podlasiak Andrzej Cylwik Spółka Komandytowa').up();
 		const attributes = () => {
 			return product.specification.forEach((attribute) => {
-				if (attribute.value === undefined || attribute.value === '')
-					return;
-				return end
-					.ele('a', { name: attribute.name })
-					.dat(attribute.value)
-					.up()
-					.up();
+				if (attribute.value === undefined || attribute.value === '') return;
+				return end.ele('a', { name: attribute.name }).dat(attribute.value).up().up();
 			});
 		};
 		attributes();
@@ -197,20 +138,14 @@ const ceneoXmlSchema = (data, root) => {
 
 export const generateCeneoFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
 		for await (const language of config.languages) {
 			await ceneoFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, ceneoXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'ceneo',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, ceneoXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'ceneo', 'xml', '../generate/feed/'))
 			);
 		}
+		await runFeedGenerator(config.name, true);
 		resolve();
 	});
 };

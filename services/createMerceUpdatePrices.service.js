@@ -1,9 +1,6 @@
 import ObjectsToCsv from 'objects-to-csv-file';
 import fs from 'fs';
-import {
-	connectToGoogleSheets,
-	getDataFromSheets,
-} from '../utilities/googleSheets.js';
+import { connectToGoogleSheets, getDataFromSheets } from '../utilities/googleSheets.js';
 import { tariffConfig } from '../config/config.js';
 import { format } from 'date-fns';
 
@@ -47,26 +44,22 @@ const convertToImportData = (data) => {
 			for (const [key, value] of Object.entries(item)) {
 				if (key.includes('_')) {
 					const tariffId = parseInt(key.split('_')[1]);
-					const config = tariffConfig.filter(
-						(item) => item.tariff === tariffId
-					);
+					const config = tariffConfig.filter((item) => item.tariff === tariffId);
 
 					if (priceType === 'product') {
 						pricesProduct.push({
-							objectId: `${tariffId}_${priceType}_${id}`,
 							tariffId,
 							itemId: id,
 							grossPrice: value,
-							tax: config[0].tax,
+							tax: parseFloat(config[0].tax),
 							currency: config[0].currency,
 						});
 					} else {
 						pricesVariant.push({
-							objectId: `${tariffId}_${priceType}_${variantId}`,
 							tariffId,
 							itemId: variantId,
 							grossPrice: value,
-							tax: config[0].tax,
+							tax: parseFloat(config[0].tax),
 							currency: config[0].currency,
 						});
 					}
@@ -78,10 +71,7 @@ const convertToImportData = (data) => {
 			.map((prod) => {
 				return {
 					...prod,
-					grossPrice:
-						prod.grossPrice === '0'
-							? ''
-							: prod.grossPrice.replace('.00', ''),
+					grossPrice: prod.grossPrice === '0' ? '' : parseFloat(prod.grossPrice.replace(',', '.')),
 				};
 			});
 		const product = flatten(pricesProduct)
@@ -89,10 +79,7 @@ const convertToImportData = (data) => {
 			.map((prod) => {
 				return {
 					...prod,
-					grossPrice:
-						prod.grossPrice === '0'
-							? ''
-							: prod.grossPrice.replace('.00', ''),
+					grossPrice: prod.grossPrice === '0' ? '' : parseFloat(prod.grossPrice.replace(',', '.')),
 				};
 			});
 		resolve({ variant, product });
@@ -102,46 +89,26 @@ const convertToImportData = (data) => {
 const splitDataToCountriesAndChunks = (data) => {
 	return new Promise((resolve) => {
 		const { variant, product } = data;
-		const countriesVariant = variant.reduce(
-			(previousValue, currentValue) => {
-				const tariffIndex = tariffConfig.findIndex(
-					(tariff) => tariff.tariff === currentValue.tariffId
-				);
-				if (previousValue[tariffConfig[tariffIndex].country]) {
-					previousValue[tariffConfig[tariffIndex].country] = [
-						...previousValue[tariffConfig[tariffIndex].country],
-						currentValue,
-					];
-					return previousValue;
-				} else {
-					previousValue[tariffConfig[tariffIndex].country] = [
-						currentValue,
-					];
-					return previousValue;
-				}
-			},
-			{}
-		);
-		const countriesProduct = product.reduce(
-			(previousValue, currentValue) => {
-				const tariffIndex = tariffConfig.findIndex(
-					(tariff) => tariff.tariff === currentValue.tariffId
-				);
-				if (previousValue[tariffConfig[tariffIndex].country]) {
-					previousValue[tariffConfig[tariffIndex].country] = [
-						...previousValue[tariffConfig[tariffIndex].country],
-						currentValue,
-					];
-					return previousValue;
-				} else {
-					previousValue[tariffConfig[tariffIndex].country] = [
-						currentValue,
-					];
-					return previousValue;
-				}
-			},
-			{}
-		);
+		const countriesVariant = variant.reduce((previousValue, currentValue) => {
+			const tariffIndex = tariffConfig.findIndex((tariff) => tariff.tariff === currentValue.tariffId);
+			if (previousValue[tariffConfig[tariffIndex].country]) {
+				previousValue[tariffConfig[tariffIndex].country] = [...previousValue[tariffConfig[tariffIndex].country], currentValue];
+				return previousValue;
+			} else {
+				previousValue[tariffConfig[tariffIndex].country] = [currentValue];
+				return previousValue;
+			}
+		}, {});
+		const countriesProduct = product.reduce((previousValue, currentValue) => {
+			const tariffIndex = tariffConfig.findIndex((tariff) => tariff.tariff === currentValue.tariffId);
+			if (previousValue[tariffConfig[tariffIndex].country]) {
+				previousValue[tariffConfig[tariffIndex].country] = [...previousValue[tariffConfig[tariffIndex].country], currentValue];
+				return previousValue;
+			} else {
+				previousValue[tariffConfig[tariffIndex].country] = [currentValue];
+				return previousValue;
+			}
+		}, {});
 		const splitedVariant = {};
 		const splitedProduct = {};
 
@@ -158,16 +125,11 @@ const splitDataToCountriesAndChunks = (data) => {
 
 const saveDataToFiles = (data) => {
 	return new Promise((resolve) => {
+		console.log(data);
 		const { splitedVariant, splitedProduct } = data;
-		fs.mkdir(
-			`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}`,
-			(err) => err && resolve(err)
-		);
+		fs.mkdir(`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}`, (err) => err && resolve(err));
 		Object.entries(splitedVariant).forEach(([key, value]) => {
-			fs.mkdir(
-				`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}`,
-				(err) => err && resolve(err)
-			);
+			fs.mkdir(`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}`, (err) => err && resolve(err));
 			value.map(async (chunk, index) => {
 				const productChunk = new ObjectsToCsv(chunk);
 				await productChunk.toDisk(
@@ -179,10 +141,7 @@ const saveDataToFiles = (data) => {
 			});
 		});
 		Object.entries(splitedProduct).forEach(([key, value]) => {
-			fs.mkdir(
-				`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}`,
-				(err) => err && resolve(err)
-			);
+			fs.mkdir(`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}`, (err) => err && resolve(err));
 			value.map(async (chunk, index) => {
 				const productChunk = new ObjectsToCsv(chunk);
 				await productChunk.toDisk(
@@ -198,16 +157,8 @@ const saveDataToFiles = (data) => {
 	});
 };
 
-await connectToGoogleSheets(
-	'1txUfuOznT1I6OdW73UswDTxgOemQ2uMdlIuYjK5dTLI'
-).then((document) =>
+await connectToGoogleSheets('1txUfuOznT1I6OdW73UswDTxgOemQ2uMdlIuYjK5dTLI').then((document) =>
 	getDataFromSheets(document, 'zmiany cen').then((data) =>
-		repairUndefinedData(data).then((data) =>
-			convertToImportData(data).then((data) =>
-				splitDataToCountriesAndChunks(data).then((data) =>
-					saveDataToFiles(data).then((data) => console.log(data))
-				)
-			)
-		)
+		repairUndefinedData(data).then((data) => convertToImportData(data).then((data) => splitDataToCountriesAndChunks(data).then((data) => saveDataToFiles(data).then((data) => console.log(data)))))
 	)
 );

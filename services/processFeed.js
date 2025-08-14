@@ -8,11 +8,34 @@ import ObjectsToCsv from 'objects-to-csv-file';
 import dotenv from 'dotenv';
 import ftp from 'basic-ftp';
 import path from 'path';
-import { subiektProducts } from '../controllers/updateFeeds.controller.js';
+// import mongoose from 'mongoose';
+import { getSubiektProducts } from './feed/subiekt/subiektFeed.js';
+
+const subiektProducts = await getSubiektProducts();
 
 dotenv.config({ path: '../.env' });
+// mongoose.set('strictQuery', true);
+// await mongoose.connect(
+// 	process.env.DATABASE_URL,
+// 	{
+// 		useNewUrlParser: true,
+// 		useUnifiedTopology: true,
+// 		serverSelectionTimeoutMS: 0,
+// 		socketTimeoutMS: 0,
+// 		connectTimeoutMS: 0,
+// 		heartbeatFrequencyMS: 2000,
+// 	},
+// 	(error) => {
+// 		if (error) {
+// 			console.log(error);
+// 		}
+// 	}
+// );
+// mongoose.connection.on('error', (err) => console.log(err));
 
 const { FTP_HOST, FTP_PORT, FTP_USER, FTP_PASS, FTP_LOCATION } = process.env;
+
+const excluded = ['REA-B2501', 'REA-B2502', 'REA-B2503', 'REA-B4209', 'REA-B4211', 'REA-B4212', 'REA-B7894', 'REA-B6395', 'REA-B5982', 'REA-B4412', 'REA-B4413', 'REA-B4414', 'REA-B4415'];
 
 export const getCurrencyRates = async (currency) => {
 	return new Promise(async (resolve, reject) => {
@@ -28,53 +51,62 @@ export const getCurrencyRates = async (currency) => {
 export const getProducts = async () => {
 	return new Promise(async (resolve, reject) => {
 		const products = await Product.find().catch((error) => reject(error));
+		const variantCountMap = products.reduce((acc, p) => {
+			acc[p.id] = (acc[p.id] || 0) + 1;
+			return acc;
+		}, {});
 
-		const data = products.map((product) => {
-			const {
-				uid,
-				id,
-				active,
-				variantId,
-				activeVariant,
-				sku,
-				ean,
-				weight,
-				stock,
-				producer,
-				aliases,
-				title,
-				description,
-				variantName,
-				basePrice,
-				sellPrice,
-				images,
-				category,
-				url,
-				attributes,
-			} = product;
-			return {
-				uid,
-				id,
-				active,
-				variantId,
-				activeVariant,
-				sku,
-				ean,
-				weight,
-				stock,
-				producer,
-				aliases,
-				title: title[0],
-				description: description[0],
-				variantName: variantName[0],
-				basePrice: basePrice[0],
-				sellPrice: sellPrice[0],
-				images,
-				category: category[0],
-				url: url[0],
-				attributes: attributes[0],
-			};
-		});
+		const data = products
+			.map((product) => {
+				const {
+					uid,
+					id,
+					active,
+					variantId,
+					activeVariant,
+					sku,
+					ean,
+					weight,
+					stock,
+					producer,
+					aliases,
+					title,
+					description,
+					variantName,
+					basePrice,
+					sellPrice,
+					images,
+					files,
+					category,
+					url,
+					attributes,
+				} = product;
+				return {
+					uid,
+					id,
+					active,
+					variantId,
+					activeVariant,
+					sku,
+					ean,
+					weight,
+					stock,
+					producer,
+					aliases,
+					title: title[0],
+					description: description[0],
+					variantName: variantName[0],
+					basePrice: basePrice[0],
+					sellPrice: sellPrice[0],
+					images,
+					files,
+					category: category[0],
+					url: url[0],
+					attributes: attributes[0],
+					count: variantCountMap[id] - 1,
+				};
+			})
+			.filter((product) => !excluded.includes(product.sku));
 		resolve(data);
 	});
 };
@@ -102,28 +134,16 @@ export const getStoreUrl = (lang, alias) => {
 	return store[0].urls.filter((url) => url.alias === alias)[0].url;
 };
 
-export const saveFeedFileToDisk = async (
-	data,
-	name,
-	format,
-	location,
-	delimiter = ';',
-	chunks = false
-) => {
+export const saveFeedFileToDisk = async (data, name, format, location, delimiter = ';', chunks = false) => {
 	return new Promise(async (resolve, reject) => {
 		const { products, language } = data;
 		if (!chunks) {
 			if (format === 'xml') {
-				await fs.writeFile(
-					`${location}${name}_${language}.${format}`,
-					products,
-					'utf8',
-					(error) => {
-						if (error) {
-							reject(error);
-						}
+				await fs.writeFile(`${location}${name}_${language}.${format}`, products, 'utf8', (error) => {
+					if (error) {
+						reject(error);
 					}
-				);
+				});
 			}
 			if (format === 'csv') {
 				const csv = new ObjectsToCsv(products);
@@ -132,27 +152,19 @@ export const saveFeedFileToDisk = async (
 				});
 			}
 			if (format === 'json') {
-				await fs.writeFile(
-					`${location}${name}_${language}.${format}`,
-					JSON.stringify(products),
-					'utf8',
-					(error) => {
-						if (error) {
-							reject(error);
-						}
+				await fs.writeFile(`${location}${name}_${language}.${format}`, JSON.stringify(products), 'utf8', (error) => {
+					if (error) {
+						reject(error);
 					}
-				);
+				});
 			}
 		} else {
 			if (format === 'csv') {
 				for await (const [index, chunk] of products.entries()) {
 					const csv = new ObjectsToCsv(chunk);
-					await csv.toDisk(
-						`${location}${name}_${language}_${index + 1}.${format}`,
-						{
-							delimiter,
-						}
-					);
+					await csv.toDisk(`${location}${name}_${language}_${index + 1}.${format}`, {
+						delimiter,
+					});
 				}
 			}
 		}
@@ -166,11 +178,8 @@ export const titleWithVariantName = (title, variantName) => {
 		.filter((word) => word !== '')
 		.map((word) => {
 			if (word === 'XL' || word === 'XXL' || word === 'XS') return word;
-			if (word.match(/app\d{1,}-\d{1,2}[a-z]{0,3}/gim))
-				return word.toUpperCase();
-			return (
-				word[0].toUpperCase() + word.slice(1, word.length).toLowerCase()
-			);
+			if (word.match(/app\d{1,}-\d{1,2}[a-z]{0,3}/gim)) return word.toUpperCase();
+			return word[0].toUpperCase() + word.slice(1, word.length).toLowerCase();
 		})
 		.join(' ');
 
@@ -182,19 +191,9 @@ export const titleWithVariantName = (title, variantName) => {
 				if (variantMatch[0].length !== 4) {
 					if (parseInt(variantMatch[0]) < 50) {
 						if (variantName.match(/\([\d]+\)/gm)) {
-							newVariantName = variantName
-								.replace(/\s\([\d]+\)/gm, '')
-								.replace(/\([\d]+\)/gm, '');
+							newVariantName = variantName.replace(/\s\([\d]+\)/gm, '').replace(/\([\d]+\)/gm, '');
 						}
-						if (
-							!isNaN(
-								parseInt(
-									variantName
-										.replace(' "N"', '')
-										.replace(' "n"', '')
-								)
-							)
-						) {
+						if (!isNaN(parseInt(variantName.replace(' "N"', '').replace(' "n"', '')))) {
 							newVariantName = '';
 						} else {
 							newVariantName = variantName;
@@ -214,20 +213,16 @@ export const titleWithVariantName = (title, variantName) => {
 					if (variantName.match(/\d{1,}x\d{1,}x\d{1,}/gm)) {
 						newVariantName = variantName;
 					}
-					if (parseInt(variantMatch[0]) < 10)
-						newVariantName = variantName;
-					if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm))
-						newVariantName = variantName;
+					if (parseInt(variantMatch[0]) < 10) newVariantName = variantName;
+					if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm)) newVariantName = variantName;
 					newVariantName = variantMatch.join('x');
 				} else {
-					if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm))
-						newVariantName = variantName;
+					if (variantName.match(/\d{1,}\s*-\s*\d{1,}/gm)) newVariantName = variantName;
 					newVariantName = variantName;
 				}
 			} else {
 				if (variantMatch[0][0] === '0') newVariantName = variantName;
-				if (parseInt(variantMatch[0]) < 10)
-					newVariantName = variantName;
+				if (parseInt(variantMatch[0]) < 10) newVariantName = variantName;
 				newVariantName = variantMatch.join('x');
 			}
 		}
@@ -240,12 +235,8 @@ export const titleWithVariantName = (title, variantName) => {
 				.split(' ')
 				.filter((word) => word !== '')
 				.map((word) => {
-					if (word === 'XL' || word === 'XXL' || word === 'XS')
-						return word;
-					return (
-						word[0].toUpperCase() +
-						word.slice(1, word.length).toLowerCase()
-					);
+					if (word === 'XL' || word === 'XXL' || word === 'XS') return word;
+					return word[0].toUpperCase() + word.slice(1, word.length).toLowerCase();
 				})
 				.join(' ');
 		newVariantName = variantName;
@@ -254,21 +245,21 @@ export const titleWithVariantName = (title, variantName) => {
 	return `${preparedTitle} ${newVariantName}`;
 };
 
-export const replaceEntities = (data) => {
-	const toCheck = data.replace(/[\r\n]/gm, '').split(' ');
-	return toCheck
-		.map((check) => {
-			let newWord = check;
-			entities.forEach((entitie) => {
-				const regex = new RegExp(entitie.entitiyName, 'gm');
-				if (check.match(regex)) {
-					newWord = check.replace(regex, entitie.char);
-				}
-			});
-			return newWord;
-		})
-		.join(' ');
-};
+// export const replaceEntities = (data) => {
+// 	const toCheck = data.replace(/[\r\n]/gm, '').split(' ');
+// 	return toCheck
+// 		.map((check) => {
+// 			let newWord = check;
+// 			entities.forEach((entitie) => {
+// 				const regex = new RegExp(entitie.entitiyName, 'gm');
+// 				if (check.match(regex)) {
+// 					newWord = check.replace(regex, entitie.char);
+// 				}
+// 			});
+// 			return newWord;
+// 		})
+// 		.join(' ');
+// };
 
 export const shopifyCategoryTypes = (categories) => {
 	if (categories.length === 0) return '';
@@ -276,9 +267,7 @@ export const shopifyCategoryTypes = (categories) => {
 		return categories[categories.length - 1].name;
 	} else {
 		if (categories[categories.length - 1].length === 0) return '';
-		return categories[categories.length - 1]
-			.map((cat) => cat.name)
-			.join(' > ');
+		return categories[categories.length - 1].map((cat) => cat.name).join(' > ');
 	}
 };
 
@@ -286,17 +275,13 @@ export const productsChunker = (products, chunks) => {
 	const totalFiles = Math.ceil(products.length / chunks);
 	const productsChunks = [];
 	for (let index = 0; index < totalFiles; index++) {
-		productsChunks.push(
-			products.slice(index * chunks, (index + 1) * chunks)
-		);
+		productsChunks.push(products.slice(index * chunks, (index + 1) * chunks));
 	}
 	return productsChunks;
 };
 export const aliasesFilter = (products, aliases) => {
 	return products
-		.filter((product) =>
-			product.aliases.some((alias) => aliases.includes(alias))
-		)
+		.filter((product) => product.aliases.some((alias) => aliases.includes(alias)))
 		.filter((product) => {
 			const { producer, aliases } = product;
 			switch (producer) {
@@ -331,22 +316,11 @@ export const aliasesFilter = (products, aliases) => {
 			}
 		});
 };
-export const productsFilter = (
-	products,
-	{
-		activeProducts,
-		activeVariants,
-		minStock,
-		emptySku = true,
-		emptyVariant = true,
-	}
-) => {
+export const productsFilter = (products, { activeProducts, activeVariants, minStock, emptySku = true, emptyVariant = true }) => {
 	return products
 		.map((product) => {
 			const { active, activeVariant, sku, stock, variantId } = product;
-			const subiektProduct = subiektProducts.filter(
-				(sub) => sub.SKU.toLowerCase() === sku.toLowerCase()
-			);
+			const subiektProduct = subiektProducts.filter((sub) => sub.SKU.toLowerCase() === sku.toLowerCase());
 
 			const subiektStock = () => {
 				if (subiektProduct.length === 0) {
@@ -354,9 +328,7 @@ export const productsFilter = (
 					if (stock < minStock) return 0;
 					return stock;
 				} else {
-					return parseInt(subiektProduct[0]['Dostępne']) < minStock
-						? 0
-						: parseInt(subiektProduct[0]['Dostępne']);
+					return parseInt(subiektProduct[0]['Dostępne']) < minStock ? 0 : parseInt(subiektProduct[0]['Dostępne']);
 				}
 			};
 
@@ -383,14 +355,9 @@ export const uploadFeeds = async (localFiles, bar) => {
 		const client = new ftp.Client();
 		const dirSize = async (directory) => {
 			const files = fs.readdirSync(directory);
-			const stats = files.map((file) =>
-				fs.statSync(path.join(directory, file))
-			);
+			const stats = files.map((file) => fs.statSync(path.join(directory, file)));
 
-			return (await Promise.all(stats)).reduce(
-				(accumulator, { size }) => accumulator + size,
-				0
-			);
+			return (await Promise.all(stats)).reduce((accumulator, { size }) => accumulator + size, 0);
 		};
 		const size = await dirSize(localFiles);
 		const sizeInMB = Math.floor(parseFloat(size) / 1000000);
@@ -400,9 +367,7 @@ export const uploadFeeds = async (localFiles, bar) => {
 		});
 
 		client.trackProgress((info) => {
-			const currentProgress = Math.floor(
-				parseFloat(info.bytesOverall) / 1000000
-			);
+			const currentProgress = Math.floor(parseFloat(info.bytesOverall) / 1000000);
 			bar.update(currentProgress, {
 				dane: 'Przesyłanie do FTP',
 				additionalData: ` ${currentProgress}/${sizeInMB} Mb •`,
@@ -419,11 +384,9 @@ export const uploadFeeds = async (localFiles, bar) => {
 		await client.uploadFromDir(localFiles, FTP_LOCATION).catch((error) => {
 			return uploadFeeds(localFiles, bar);
 		});
-		await client
-			.uploadFromDir(localFiles, FTP_LOCATION + 'feeds')
-			.catch((error) => {
-				return uploadFeeds(localFiles, bar);
-			});
+		await client.uploadFromDir(localFiles, FTP_LOCATION + 'feeds').catch((error) => {
+			return uploadFeeds(localFiles, bar);
+		});
 		bar.update(0, {
 			dane: 'Przesłano do FTP',
 			additionalData: ``,
@@ -433,5 +396,3 @@ export const uploadFeeds = async (localFiles, bar) => {
 		resolve();
 	});
 };
-
-export const addMuToPrice = (price, mu) => parseFloat(price) * (mu / 100 + 1);

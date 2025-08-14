@@ -1,32 +1,12 @@
 import fs from 'fs';
-import {
-	mapSimpleData,
-	mapAliases,
-	mapCategories,
-	mapImages,
-	mapPrices,
-	mapUrls,
-	mapProfilesValues,
-	mapProducers,
-	mapProfiles,
-	mapDescriptions,
-} from './valuesMapping.js';
+import { mapSimpleData, mapAliases, mapCategories, mapImages, mapPrices, mapUrls, mapProfilesValues, mapProducers, mapProfiles, mapDescriptions, mapProductFiles } from './valuesMapping.js';
 
 export const processJsonProducts = (fileName, data) => {
 	const processedProducts = [];
 
-	const products = JSON.parse(
-		fs.readFileSync(`../public/temp/data/${fileName}`, 'utf8')
-	);
+	const products = JSON.parse(fs.readFileSync(`../public/temp/data/${fileName}`, 'utf8'));
 
-	const {
-		aliases,
-		categories,
-		profiles,
-		profileFields,
-		profileFieldsChoices,
-		producers,
-	} = data;
+	const { aliases, categories, profiles, profileFields, profileFieldsChoices, producers } = data;
 	products.forEach((product) => {
 		processedProducts.push({
 			aliases: mapAliases(product.aliases, aliases),
@@ -45,14 +25,10 @@ export const processJsonProducts = (fileName, data) => {
 			description: mapDescriptions(product.descriptions, aliases),
 			categories: mapCategories(product.categories, categories),
 			images: mapImages(product.images),
+			files: mapProductFiles(product.files, aliases),
 			price: mapPrices(product.basePrice),
 			promoPrice: mapPrices(product.sellPrice),
-			attributes: mapProfiles(
-				product.profiles,
-				profiles,
-				profileFields,
-				profileFieldsChoices
-			),
+			attributes: mapProfiles(product.profiles, profiles, profileFields, profileFieldsChoices),
 		});
 		if (product.variants.variant === undefined) return;
 		if (product.variants.variant.length === undefined) {
@@ -61,31 +37,22 @@ export const processJsonProducts = (fileName, data) => {
 				id: product.$id,
 				active: product.$active === 'true' ? 1 : 0,
 				variantId: product.variants.variant.$id,
-				activeVariant:
-					product.variants.variant.$isActive === 'true' ? 1 : 0,
+				activeVariant: product.variants.variant.$isActive === 'true' ? 1 : 0,
 				sku: product.variants.variant.$symbol,
 				ean: product.variants.variant.$ean,
 				weight: parseFloat(product.$weight),
 				title: mapSimpleData(product.titles.title),
-				variantName: mapSimpleData(
-					product.variants.variant.optionName.name
-				),
+				variantName: mapSimpleData(product.variants.variant.optionName.name),
 				url: mapUrls(product.urls, aliases),
-				stock: parseInt(
-					product.variants.variant.stockTotal.stock[0].$quantity
-				),
+				stock: parseInt(product.variants.variant.stockTotal.stock[0].$quantity),
 				producer: mapProducers(product.$producer, producers),
 				description: mapDescriptions(product.descriptions, aliases),
 				categories: mapCategories(product.categories, categories),
 				images: mapImages(product.images),
+				files: mapProductFiles(product.files, aliases),
 				price: mapPrices(product.variants.variant.basePrice),
 				promoPrice: mapPrices(product.variants.variant.sellPrice),
-				attributes: mapProfiles(
-					product.profiles,
-					profiles,
-					profileFields,
-					profileFieldsChoices
-				),
+				attributes: mapProfiles(product.profiles, profiles, profileFields, profileFieldsChoices),
 			});
 		} else {
 			product.variants.variant.forEach((variant) => {
@@ -108,12 +75,7 @@ export const processJsonProducts = (fileName, data) => {
 					images: mapImages(product.images),
 					price: mapPrices(variant.basePrice),
 					promoPrice: mapPrices(variant.sellPrice),
-					attributes: mapProfiles(
-						product.profiles,
-						profiles,
-						profileFields,
-						profileFieldsChoices
-					),
+					attributes: mapProfiles(product.profiles, profiles, profileFields, profileFieldsChoices),
 				});
 			});
 		}

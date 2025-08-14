@@ -1,35 +1,15 @@
-import {
-	addMuToPrice,
-	aliasesFilter,
-	excludedFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-} from '../../processFeed.js';
+import { getStoreUrl, saveFeedFileToDisk } from '../../processFeed.js';
 import { getDescription } from '../../../utilities/descriptions.js';
+import { connectToGoogleSheets, getDataFromSheets } from '../../../utilities/googleSheets.js';
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
+import { addMuToPrice } from '../../products/utils/addMuToPrice.js';
 
-const wszystkoFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+const wszystkoFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
+	const kategoria = await connectToGoogleSheets('1txUfuOznT1I6OdW73UswDTxgOemQ2uMdlIuYjK5dTLI').then((document) => getDataFromSheets(document, 'PRZELICZANIE CEN').then((data) => data));
 	const headers = data
 		.sort((a, b) => b.images.length - a.images.length)
 		.map((product) => {
-			const {
-				active,
-				activeVariant,
-				stock,
-				variantId,
-				images,
-				attributes,
-			} = product;
+			const { active, activeVariant, stock, variantId, images, attributes } = product;
 
 			const imagesObj = images.reduce((prev, curr, index) => {
 				return {
@@ -41,16 +21,14 @@ const wszystkoFeed = async (
 			const attributesObj =
 				attributes[language].length === undefined
 					? [attributes[language]].reduce((prev, curr) => {
-							if (curr.name === '')
-								console.log(curr.name, variantId);
+							if (curr.name === '') console.log(curr.name, variantId);
 							return {
 								...prev,
 								[`${curr.name}`]: '',
 							};
 						}, {})
 					: attributes[language].reduce((prev, curr) => {
-							if (curr.name === '')
-								console.log(curr.name, variantId);
+							if (curr.name === '') console.log(curr.name, variantId);
 							return {
 								...prev,
 								[`${curr.name}`]: '',
@@ -71,6 +49,7 @@ const wszystkoFeed = async (
 				title: '',
 				description: '',
 				variantName: '',
+				kategoria: '',
 				basePrice: '',
 				sellPrice: '',
 				tax: '',
@@ -89,29 +68,10 @@ const wszystkoFeed = async (
 		}, {});
 
 	const productsAllData = data.reduce((prev, curr) => {
-		const {
-			active,
-			id,
-			activeVariant,
-			variantId,
-			sku,
-			ean,
-			weight,
-			stock,
-			producer,
-			aliases,
-			title,
-			description,
-			variantName,
-			basePrice,
-			sellPrice,
-			category,
-			url,
-			attributes,
-			images,
-		} = curr;
+		const { active, id, activeVariant, variantId, sku, ean, weight, stock, producer, aliases, title, description, variantName, basePrice, sellPrice, category, url, attributes, images } = curr;
 
 		const storeUrl = getStoreUrl(language, 'Rea');
+		const catName = kategoria.find(({ id }) => parseInt(id) === parseInt(id));
 
 		const attributesObj =
 			attributes[language].length === undefined
@@ -147,6 +107,7 @@ const wszystkoFeed = async (
 				title: title[language],
 				description: getDescription(description, language, producer),
 				variantName: variantName[language],
+				kategoria: catName === undefined ? '' : catName['KATEGORIA'],
 				basePrice: addMuToPrice(basePrice[language].price, mu),
 				sellPrice: addMuToPrice(sellPrice[language].price, mu),
 				tax: basePrice[language].tax,
@@ -155,12 +116,8 @@ const wszystkoFeed = async (
 					category[language][0] === undefined
 						? ''
 						: category[language][0].length === undefined
-							? [category[language][0]]
-									.map((cat) => cat.name)
-									.join(' > ')
-							: category[language][0]
-									.map((cat) => cat.name)
-									.join(' > '),
+							? [category[language][0]].map((cat) => cat.name).join(' > ')
+							: category[language][0].map((cat) => cat.name).join(' > '),
 				url: storeUrl + url[language]['Rea'],
 				...images.reduce(
 					(prev, curr, index) => ({
@@ -178,18 +135,14 @@ const wszystkoFeed = async (
 
 export const generateWszystkoFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
 		for await (const language of config.languages) {
-			await wszystkoFeed(products, language, config).then(
-				async (data) => {
-					await saveFeedFileToDisk(
-						data,
-						'wszystko',
-						'csv',
-						'../generate/feed/'
-					);
-				}
-			);
+			await wszystkoFeed(products, language, config).then(async (data) => {
+				await saveFeedFileToDisk(data, 'wszystko', 'csv', '../generate/feed/');
+			});
 		}
+		await runFeedGenerator(config.name, true);
 		resolve();
 	});
 };

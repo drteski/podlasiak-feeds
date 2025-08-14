@@ -5,3 +5,9 @@ generate/feed
 /services/feed-downloader/*.txt
 /public/temp/*.xml
 .env
+/services/scratch/apilo/
+/services/scratch/apilo/podlasiakApiloTokens
+/services/scratch/device
+/services/scratch/myFirstKey
+/services/scratch/tokens
+/services/shopify.js

@@ -12,7 +12,7 @@ export const imagesUrl = (data, language, aliases, options = '') => {
 		height: 2000,
 		filters: {
 			quality: 100,
-			fill: '#ffffff',
+			fill: 'transparent',
 		},
 	};
 
@@ -20,7 +20,7 @@ export const imagesUrl = (data, language, aliases, options = '') => {
 		options === ''
 			? ''
 			: options === 'default'
-				? `${defaults.fitType}/${defaults.width}x${defaults.height}/filters:quality(${defaults.filters.quality}):fill(${defaults.filters.fill},1)/`
+				? `filters:quality(${defaults.filters.quality})/`
 				: `${options.fitType}/${options.width}x${options.height}/filters:quality(${options.filters.quality}):fill(${options.filters.fill.replace('#', '')},1)/`;
 
 	const alias = aliases.length === 0 ? 'Rea' : aliases[0];
@@ -29,7 +29,7 @@ export const imagesUrl = (data, language, aliases, options = '') => {
 };
 
 export const productUrl = (data, language, aliases, options = '') => {
-	const alias = aliases.length === 0 ? 'Rea' : aliases[0];
+	const alias = aliases.length === 0 ? 'Tutumi' : aliases[0];
 	const storeUrl = getStoreUrl(language, alias);
 	return storeUrl + data[language][alias] + options;
 };

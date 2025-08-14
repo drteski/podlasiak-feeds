@@ -1,59 +1,29 @@
-import {
-	aliasesFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-	excludedFilter,
-	xmlBuilider,
-} from '../../processFeed.js';
+import { aliasesFilter, saveFeedFileToDisk, excludedFilter, xmlBuilider } from '../../processFeed.js';
 import { imagesUrl, productUrl } from '../../../utilities/urls.js';
 import { getDescription } from '../../../utilities/descriptions.js';
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
+import { checkProductsInFeed, productsInFeed } from '../../products/utils/productsInFeed.js';
 
-const bianoFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
-	const products = excludedFilter(aliasesFilter(data, aliases), options)
-		.map((product) => {
-			const {
-				active,
-				variantId,
-				activeVariant,
-				sku,
-				stock,
-				producer,
-				title,
-				description,
-				sellPrice,
-				images,
-				url,
-				attributes,
-			} = product;
-			if (variantId === '') return;
-			if (sku === '') return;
-			if (activeProducts) {
-				if (!active) return;
+const bianoFeed = async (data, language, { name, mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
+	const products = await Promise.all(
+		excludedFilter(aliasesFilter(data, aliases), options).map(async (product) => {
+			const { active, id, variantId, activeVariant, sku, stock, producer, title, description, sellPrice, images, url, attributes } = product;
+			const isInFeed = await checkProductsInFeed(name, variantId, language);
+			if (!isInFeed) {
+				if (variantId === '') return;
+				if (sku === '') return;
+				if (activeProducts) {
+					if (!active) return;
+				}
+				if (activeVariants) {
+					if (!activeVariant) return;
+				}
+				if (stock < minStock) return;
 			}
-			if (activeVariants) {
-				if (!activeVariant) return;
-			}
-			if (stock < minStock) return;
 
-			const filteredAttributes = (
-				attributes[language].length === undefined
-					? [attributes[language]]
-					: attributes[language]
-			)
+			const filteredAttributes = (attributes[language].length === undefined ? [attributes[language]] : attributes[language])
 				.map((attribute) => {
-					if (attribute.value === '' || attribute.value === undefined)
-						return;
+					if (attribute.value === '' || attribute.value === undefined) return;
 					if (attribute.value === 'Wysyłamy w: 24h') return;
 					if (attribute.value === '*Wysyłamy w: 24h*') return;
 					return attribute;
@@ -83,26 +53,27 @@ const bianoFeed = async (
 			}
 
 			return {
-				variantId,
+				id,
 				title: title[language],
 				description: getDescription(description, language, producer),
 				brand: producer,
-				url: productUrl(
-					url,
-					language,
-					aliases,
-					'?utm_source=idealo&utm_medium=cpc'
-				),
+				url: productUrl(url, language, aliases, '?utm_source=idealo&utm_medium=cpc'),
 				media: imagesUrl(images, language, aliases),
 				deliveryTime,
 				attributes: filteredAttributes,
 				price: sellPrice[language].price,
+				variantId,
 			};
 		})
-		.filter(Boolean);
+	);
 
+	const finalProducts = products.filter(Boolean).reduce((acc, curr) => {
+		if (acc.find((item) => item.id === curr.id)) return acc;
+		return acc.concat(curr);
+	}, []);
+	await productsInFeed(name, finalProducts, language);
 	return {
-		products,
+		products: finalProducts,
 		language,
 	};
 };
@@ -115,14 +86,14 @@ const bianoXmlSchema = (data, root) => {
 
 	const offers = rootElement.ele('ITEMS', {
 		'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-		version: '1',
+		'version': '1',
 	});
 
 	products.forEach((product) => {
 		const itemFront = offers
 			.ele('ITEM')
 			.ele('ITEM_ID')
-			.txt(`${product.variantId}`)
+			.txt(`${product.id}`)
 			.up()
 			.ele('PRODUCTNAME')
 			.txt(`${product.title}`)
@@ -163,15 +134,7 @@ const bianoXmlSchema = (data, root) => {
 		const itemAttributes = () => {
 			return product.attributes.forEach((attr, index) => {
 				if (index === 0) return;
-				return offers
-					.ele('PARAM')
-					.ele('PARAM_NAME')
-					.txt(`${attr.name}`)
-					.up()
-					.ele('VAL')
-					.txt(`${attr.value}`)
-					.up()
-					.up();
+				return offers.ele('PARAM').ele('PARAM_NAME').txt(`${attr.name}`).up().ele('VAL').txt(`${attr.value}`).up().up();
 			});
 		};
 		itemAttributes();
@@ -181,20 +144,14 @@ const bianoXmlSchema = (data, root) => {
 
 export const generateBianoFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
 		for await (const language of config.languages) {
 			await bianoFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, bianoXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'biano',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, bianoXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'biano', 'xml', '../generate/feed/'))
 			);
 		}
+		await runFeedGenerator(config.name, true);
 		resolve();
 	});
 };

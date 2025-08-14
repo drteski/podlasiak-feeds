@@ -1,7 +1,6 @@
 import { tariff } from '../../../../data/tariff.js';
 import { newConfig } from '../../../../config/config.js';
 import { stripHtml } from 'string-strip-html';
-import { replaceEntities } from '../../../processFeed.js';
 export const mapSimpleData = (data) => {
 	if (data[0]?.$alias === undefined) {
 		return tariff.reduce((prev, curr) => {
@@ -14,19 +13,12 @@ export const mapSimpleData = (data) => {
 			}
 			return {
 				...prev,
-				[`${curr.lang}`]:
-					data[dataIndex].$ === undefined
-						? ''
-						: data[dataIndex].$ === '---'
-							? ''
-							: stripHtml(data[dataIndex].$).result,
+				[`${curr.lang}`]: data[dataIndex].$ === undefined ? '' : data[dataIndex].$ === '---' ? '' : stripHtml(data[dataIndex].$).result,
 			};
 		}, {});
 	} else {
 		return tariff.reduce((prev, curr) => {
-			const dataIndex = data
-				.filter((d) => d.$alias === '6')
-				.findIndex((d) => d.$lang === curr.lang);
+			const dataIndex = data.filter((d) => d.$alias === '6').findIndex((d) => d.$lang === curr.lang);
 
 			if (dataIndex === -1) {
 				return {
@@ -37,17 +29,11 @@ export const mapSimpleData = (data) => {
 			return {
 				...prev,
 
-				[`${curr.lang}`]:
-					data[dataIndex].$ === undefined
-						? ''
-						: data[dataIndex].$ === '---'
-							? ''
-							: stripHtml(data[dataIndex].$).result,
+				[`${curr.lang}`]: data[dataIndex].$ === undefined ? '' : data[dataIndex].$ === '---' ? '' : stripHtml(data[dataIndex].$).result,
 			};
 		}, {});
 	}
 };
-
 export const mapDescriptions = (data, allAliases) => {
 	const descriptions = (rawData, description) => {
 		if (rawData.length !== 0) {
@@ -66,10 +52,7 @@ export const mapDescriptions = (data, allAliases) => {
 		return ['Rea', 'Tutumi', 'Toolight'].reduce((prev, curr) => {
 			if (data.length !== 0) {
 				const filteredDescriptions = data.description.filter((desc) => {
-					return (
-						mapAliases(desc.$alias, allAliases)[0] === curr &&
-						lang === desc.$lang
-					);
+					return mapAliases(desc.$alias, allAliases)[0] === curr && lang === desc.$lang;
 				});
 				const description = descriptions(filteredDescriptions, curr);
 				return {
@@ -100,15 +83,12 @@ export const mapDescriptions = (data, allAliases) => {
 		}, {});
 	}
 };
-
 export const mapAliases = (productAliases, allAliases) => {
 	if (productAliases.length === 0) return [];
 	return productAliases
 		.split(';')
 		.map((alias) => {
-			const aliasesId = allAliases.findIndex(
-				(a) => a.id === parseInt(alias)
-			);
+			const aliasesId = allAliases.findIndex((a) => a.id === parseInt(alias));
 			if (aliasesId === -1) return;
 			return allAliases[aliasesId].name;
 		})
@@ -118,9 +98,7 @@ export const mapCategories = (data, categories) => {
 	const makeCategoryPath = (categoryId, categories, lang) => {
 		const catPath = [];
 		const createPath = (id, cats) => {
-			const categoryExistIndex = cats.findIndex(
-				(cat) => cat.id === parseInt(id)
-			);
+			const categoryExistIndex = cats.findIndex((cat) => cat.id === parseInt(id));
 			if (categoryExistIndex === -1) return;
 			if (isNaN(categories[categoryExistIndex].parentId)) {
 				return catPath.push({
@@ -150,20 +128,14 @@ export const mapCategories = (data, categories) => {
 			return newConfig.reduce((prev, curr) => {
 				return {
 					...prev,
-					[`${curr.code}`]: makeCategoryPath(
-						data.category.$id,
-						categories,
-						curr.code
-					),
+					[`${curr.code}`]: makeCategoryPath(data.category.$id, categories, curr.code),
 				};
 			}, {});
 		} else {
 			return newConfig.reduce((prev, curr) => {
 				return {
 					...prev,
-					[`${curr.code}`]: data.category.map((c) =>
-						makeCategoryPath(c.$id, categories, curr.code)
-					),
+					[`${curr.code}`]: data.category.map((c) => makeCategoryPath(c.$id, categories, curr.code)),
 				};
 			}, {});
 		}
@@ -214,9 +186,7 @@ export const mapPrices = (data) => {
 	}
 	return tariff
 		.map((tar) => {
-			const priceId = preparedPrices.findIndex(
-				(price) => price.tariff === tar.tariff
-			);
+			const priceId = preparedPrices.findIndex((price) => price.tariff === tar.tariff);
 			if (priceId !== -1) {
 				return {
 					tariff: tar.tariff,
@@ -268,10 +238,7 @@ export const mapUrls = (data, allAliases) => {
 		return configData[index].urls.reduce((prev, curr) => {
 			if (data.length !== 0) {
 				const filteredUrls = data.url.filter((d) => {
-					return (
-						mapAliases(d.$alias, allAliases)[0] === curr.alias &&
-						lang === d.$lang
-					);
+					return mapAliases(d.$alias, allAliases)[0] === curr.alias && lang === d.$lang;
 				});
 				return {
 					...prev,
@@ -300,58 +267,28 @@ export const mapUrls = (data, allAliases) => {
 		}, {});
 	}
 };
-export const mapProfiles = (
-	data,
-	profiles,
-	profileFields,
-	profileFieldsChoices
-) => {
+export const mapProfiles = (data, profiles, profileFields, profileFieldsChoices) => {
 	const makeProfiles = (currentField, lang) => {
 		const fieldId = parseInt(currentField.$id);
 		const profileId = parseInt(currentField.$profile);
-		const profileField = profileFields
-			.filter((pr) => pr.id === fieldId)
-			.filter((pr) => pr.profileId === profileId);
+		const profileField = profileFields.filter((pr) => pr.id === fieldId).filter((pr) => pr.profileId === profileId);
 		let profileValue = '';
 
 		if (profileField.length !== 0) {
 			if (Object.prototype.hasOwnProperty.call(currentField, 'value')) {
 				if (currentField.value.length !== 0) {
 					if (currentField.$type === 'text_line') {
-						if (
-							Object.prototype.hasOwnProperty.call(
-								currentField.value[
-									currentField.value.findIndex(
-										(v) => v.$lang === lang
-									)
-								],
-								'$'
-							)
-						) {
-							profileValue =
-								currentField.value[
-									currentField.value.findIndex(
-										(v) => v.$lang === lang
-									)
-								].$;
+						if (Object.prototype.hasOwnProperty.call(currentField.value[currentField.value.findIndex((v) => v.$lang === lang)], '$')) {
+							profileValue = currentField.value[currentField.value.findIndex((v) => v.$lang === lang)].$;
 						}
 					}
 					if (currentField.$type === 'yes_no') {
-						profileValue = currentField === 'YES' ? '1' : '0';
+						profileValue = currentField.value === 'YES' ? '1' : '0';
 					}
 					if (currentField.$type === 'choice') {
-						const profileFieldChoice = profileFieldsChoices
-							.filter(
-								(pr) => pr.id === parseInt(currentField.value)
-							)
-							.filter((pr) => pr.fieldId === fieldId);
+						const profileFieldChoice = profileFieldsChoices.filter((pr) => pr.id === parseInt(currentField.value)).filter((pr) => pr.fieldId === fieldId);
 						if (profileFieldChoice.length !== 0) {
-							if (
-								Object.prototype.hasOwnProperty.call(
-									profileFieldChoice[0],
-									'name'
-								)
-							) {
+							if (Object.prototype.hasOwnProperty.call(profileFieldChoice[0], 'name')) {
 								profileValue = profileFieldChoice[0].name[lang];
 							}
 						}
@@ -363,30 +300,12 @@ export const mapProfiles = (
 						profileValue = currentField.value
 							.split(';')
 							.map((v) => {
-								const profileFieldMultipleChoice =
-									profileFieldsChoices
-										.filter((pr) => pr.id === parseInt(v))
-										.filter((pr) => pr.fieldId === fieldId);
+								const profileFieldMultipleChoice = profileFieldsChoices.filter((pr) => pr.id === parseInt(v)).filter((pr) => pr.fieldId === fieldId);
 								if (profileFieldMultipleChoice.length !== 0) {
-									if (
-										Object.prototype.hasOwnProperty.call(
-											profileFieldMultipleChoice[0],
-											'name'
-										)
-									) {
+									if (Object.prototype.hasOwnProperty.call(profileFieldMultipleChoice[0], 'name')) {
 										return (
-											profileFieldMultipleChoice[0].name[
-												lang
-											]
-												.slice(0, 1)
-												.toUpperCase() +
-											profileFieldMultipleChoice[0].name[
-												lang
-											].slice(
-												1,
-												profileFieldMultipleChoice[0]
-													.name[lang].length
-											)
+											profileFieldMultipleChoice[0].name[lang].slice(0, 1).toUpperCase() +
+											profileFieldMultipleChoice[0].name[lang].slice(1, profileFieldMultipleChoice[0].name[lang].length)
 										);
 									}
 								} else {
@@ -396,41 +315,13 @@ export const mapProfiles = (
 							.join(', ');
 					}
 					if (currentField.$type === 'text_box') {
-						if (
-							Object.prototype.hasOwnProperty.call(
-								currentField.value[
-									currentField.value.findIndex(
-										(v) => v.$lang === lang
-									)
-								],
-								'$'
-							)
-						) {
-							profileValue =
-								currentField.value[
-									currentField.value.findIndex(
-										(v) => v.$lang === lang
-									)
-								].$;
+						if (Object.prototype.hasOwnProperty.call(currentField.value[currentField.value.findIndex((v) => v.$lang === lang)], '$')) {
+							profileValue = currentField.value[currentField.value.findIndex((v) => v.$lang === lang)].$;
 						}
 					}
 					if (currentField.$type === 'header') {
-						if (
-							Object.prototype.hasOwnProperty.call(
-								currentField.value[
-									currentField.value.findIndex(
-										(v) => v.$lang === lang
-									)
-								],
-								'$'
-							)
-						) {
-							profileValue =
-								currentField.value[
-									currentField.value.findIndex(
-										(v) => v.$lang === lang
-									)
-								].$;
+						if (Object.prototype.hasOwnProperty.call(currentField.value[currentField.value.findIndex((v) => v.$lang === lang)], '$')) {
+							profileValue = currentField.value[currentField.value.findIndex((v) => v.$lang === lang)].$;
 						}
 					}
 				}
@@ -454,9 +345,7 @@ export const mapProfiles = (
 			return newConfig.reduce((prev, curr) => {
 				return {
 					...prev,
-					[`${curr.code}`]: data.field.map((d) =>
-						makeProfiles(d, curr.code)
-					),
+					[`${curr.code}`]: data.field.map((d) => makeProfiles(d, curr.code)),
 				};
 			}, {});
 		} else {
@@ -476,7 +365,6 @@ export const mapProfiles = (
 		}, {});
 	}
 };
-
 export const mapProfilesValues = (data) => {
 	if (data.length === undefined) {
 		if (data.field.length !== undefined) {
@@ -514,5 +402,27 @@ export const mapProfilesValues = (data) => {
 		}
 	} else {
 		return [];
+	}
+};
+export const mapProductFiles = (data, allAliases) => {
+	if (data.length === 0) return [];
+	if (data.file !== undefined) {
+		if (data.file.length === undefined) {
+			return {
+				fileName: data.file.$fileName,
+				url: data.file.$url,
+				visibleInAliases: mapAliases(data.file.$visibleInAliases, allAliases),
+				visibleInLanguages: data.file.$visibleInLanguages.split(';'),
+			};
+		}
+		if (data.file.length === 0) return [];
+		return data.file.map((item) => {
+			return {
+				fileName: item.$fileName,
+				url: item.$url,
+				visibleInAliases: mapAliases(item.$visibleInAliases, allAliases),
+				visibleInLanguages: item.$visibleInLanguages.split(';'),
+			};
+		});
 	}
 };

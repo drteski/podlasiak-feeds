@@ -1,31 +1,15 @@
 import Product from '../../../../models/Product.js';
+import { isToday } from 'date-fns';
 
 export const pushProduct = async (product) => {
-	const {
-		id,
-		active,
-		variantId,
-		activeVariant,
-		sku,
-		ean,
-		weight,
-		stock,
-		producer,
-		url,
-		attributes,
-		price,
-		promoPrice,
-		description,
-		title,
-		variantName,
-		aliases,
-		images,
-		categories,
-	} = product;
+	const { id, active, variantId, activeVariant, sku, ean, weight, stock, producer, url, attributes, price, promoPrice, description, title, variantName, aliases, images, files, categories } =
+		product;
 
 	const existing = await Product.findOne({
 		uid: `${id}${variantId}`,
 	});
+	if (isToday(existing?.updatedAt)) return;
+
 	if (existing) {
 		await Product.updateOne(
 			{
@@ -49,9 +33,11 @@ export const pushProduct = async (product) => {
 				basePrice: price,
 				sellPrice: promoPrice,
 				images,
+				files,
 				category: categories,
 				url,
 				attributes,
+				updatedAt: new Date(),
 			}
 		);
 	} else {
@@ -73,9 +59,11 @@ export const pushProduct = async (product) => {
 			basePrice: price,
 			sellPrice: promoPrice,
 			images,
+			files,
 			category: categories,
 			url,
 			attributes,
+			updatedAt: new Date(),
 		});
 		await newProduct.save();
 	}

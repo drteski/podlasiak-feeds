@@ -1,8 +1,8 @@
 <?php
 # $url = 'https://files.lazienka-rea.com.pl/feed-small.xml';
 $url = 'https://lazienka-rea.com.pl/feed/generate/full_offer';
-$xmlDownloadLocation = '../../public/temp/';
-$jsonSaveLocation = '../../public/temp/data/';
+$xmlDownloadLocation = '/Volumes/Web/podlasiak-feeds/public/temp/';
+$jsonSaveLocation = '/Volumes/Web/podlasiak-feeds/public/temp/data/';
 $productsPerFile = 100;
 $ftp_server = "185.157.236.191";
 $ftp_username = "ftp_podlasiak";
@@ -21,10 +21,10 @@ function pushToFtp()
 		if ($login) {
 
 
-			$files = glob('../../public/temp/data/*');
+			$files = glob('/Volumes/Web/podlasiak-feeds/public/temp/data/*');
 			foreach ($files as $file) {
 				if (is_file($file)) {
-					$remote_file = str_replace(array('../../public/temp/data/'), '/fulloffer/', $file);
+					$remote_file = str_replace(array('/Volumes/Web/podlasiak-feeds/public/temp/data/'), '/fulloffer/', $file);
 
 					if (ftp_put($ftp_connection, $remote_file, $file, FTP_ASCII)) {
 						echo "successfully uploaded $file\n";
@@ -112,8 +112,8 @@ function fetchXml($url)
 	curl_setopt($ch, CURLOPT_TIMEOUT, 3600);
 	$output = curl_exec($ch);
 	curl_close($ch);
-	$jsonFiles = glob('../../public/temp/data/*');
-	$feedFile = glob('../../public/temp/*');
+	$jsonFiles = glob('/Volumes/Web/podlasiak-feeds/public/temp/data/*');
+	$feedFile = glob('/Volumes/Web/podlasiak-feeds/public/temp/*');
 	foreach ($feedFile as $file) {
 		if (is_file($file)) {
 			unlink($file);

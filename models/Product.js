@@ -51,12 +51,19 @@ const Product = new mongoose.Schema({
 	images: {
 		type: [{}],
 	},
+	files: {
+		type: [{}],
+	},
 	category: { type: [{}] },
 	url: {
 		type: [{}],
 	},
 	attributes: {
 		type: [{}],
+	},
+	updatedAt: {
+		type: Date,
+		default: () => new Date(),
 	},
 });
 

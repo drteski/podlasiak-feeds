@@ -1,45 +1,12 @@
-import {
-	aliasesFilter,
-	getStoreUrl,
-	saveFeedFileToDisk,
-	excludedFilter,
-	xmlBuilider,
-} from '../../processFeed.js';
+import { aliasesFilter, getStoreUrl, saveFeedFileToDisk, excludedFilter, xmlBuilider } from '../../processFeed.js';
 import { format, formatISO } from 'date-fns';
 import { imagesUrl } from '../../../utilities/urls.js';
 import { getDescription } from '../../../utilities/descriptions.js';
-const googleFeed = async (
-	data,
-	language,
-	{
-		mu = 0,
-		aliases = ['Rea', 'Tutumi', 'Toolight'],
-		activeProducts = true,
-		activeVariants = true,
-		minStock,
-		options,
-	}
-) => {
+import { runFeedGenerator } from '../../products/services/runFeedGenerator.js';
+const googleFeed = async (data, language, { mu = 0, aliases = ['Rea', 'Tutumi', 'Toolight'], activeProducts = true, activeVariants = true, minStock, options }) => {
 	const products = excludedFilter(aliasesFilter(data, aliases), options)
 		.map((product) => {
-			const {
-				id,
-				active,
-				variantId,
-				activeVariant,
-				sku,
-				ean,
-				stock,
-				producer,
-				weight,
-				category,
-				title,
-				description,
-				basePrice,
-				sellPrice,
-				images,
-				url,
-			} = product;
+			const { id, active, variantId, activeVariant, sku, ean, stock, producer, weight, category, title, description, basePrice, sellPrice, images, url } = product;
 			if (variantId === '') return;
 			if (sku === '') return;
 			if (weight >= 30) return;
@@ -50,13 +17,9 @@ const googleFeed = async (
 			const categoryPath =
 				category[language][0] === undefined
 					? ''
-					: category[language][category[language].length - 1]
-								.length !== undefined
-						? category[language][category[language].length - 1]
-								.map((cat) => cat.name)
-								.join(' > ')
-						: category[language][category[language].length - 1]
-								.name;
+					: category[language][category[language].length - 1].length !== undefined
+						? category[language][category[language].length - 1].map((cat) => cat.name).join(' > ')
+						: category[language][category[language].length - 1].name;
 			return {
 				id,
 				ean,
@@ -84,7 +47,7 @@ const googleXmlSchema = (data, root) => {
 		.create({ version: '1.0', encoding: 'UTF-8' })
 		.ele('feed', {
 			'xmlns:g': 'http://base.google.com/ns/1.0',
-			xmlns: 'http://www.w3.org/2005/Atom',
+			'xmlns': 'http://www.w3.org/2005/Atom',
 		})
 		.ele('title')
 		.dat('rea.ua')
@@ -176,20 +139,14 @@ const googleXmlSchema = (data, root) => {
 
 export const generateGoogleFeed = async (products, config) => {
 	return new Promise(async (resolve) => {
+		const shouldRun = await runFeedGenerator(config.name);
+		if (!shouldRun) return resolve();
 		for await (const language of config.languages) {
 			await googleFeed(products, language, config).then(
-				async (data) =>
-					await xmlBuilider(data, googleXmlSchema).then(
-						async (xml) =>
-							await saveFeedFileToDisk(
-								xml,
-								'google',
-								'xml',
-								'../generate/feed/'
-							)
-					)
+				async (data) => await xmlBuilider(data, googleXmlSchema).then(async (xml) => await saveFeedFileToDisk(xml, 'google', 'xml', '../generate/feed/'))
 			);
 		}
+		await runFeedGenerator(config.name, true);
 		resolve();
 	});
 };

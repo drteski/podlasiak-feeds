@@ -1,0 +1,268 @@
+<meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
+<title>Wysłane</title>
+<style>
+	@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&display=swap');
+
+
+	* {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+	}
+</style>
+<div class="body-wrapper"
+     style="padding: 8px 8px 64px; background-color: #ffffff; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; color: #000000;">
+	<div class="wrapper"
+	     style="max-width: 600px; padding: 0; margin: 0 auto; background-color: #f2f2f2; border: 1px dashed #c4c4c4; border-radius: 12px; box-shadow: 0px 10px 24px -10px rgba(0, 0, 0, 0.2); overflow: hidden;">
+		<a href="https://bikepackride.pl" style="display: block;"
+		   target="_blank"><img alt="Logo BIKEPACKRIDE"
+		                        height="auto"
+		                        src="https://bikepackride.pl/data/include/cms/bpr/baner.jpg"
+		                        style="display: block; width: 100%;"
+		                        width="100%"></a>
+
+		<table style="border-collapse: collapse; width: 100%;">
+			<tbody>
+			<tr>
+				<td colspan="2" style="padding: 24px 24px 0; width: 50%">
+					<p style="margin: 0;">Zamówienie
+					</p>
+				</td>
+			</tr>
+			<tr>
+				<td style="padding: 0 24px 6px;">
+					<p style="margin: 0; font-size: 18px;"><strong>#[numer_zamowienia]</strong></p>
+				</td>
+				<td style="padding: 0 24px 6px;">
+					<p style="margin: 0; font-size: 18px; text-align: right"><strong>[data_zamowienia]</strong></p>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2" style="padding: 6px 24px 0; width: 50%">
+					<p style="margin: 0;">Złożone na
+					</p>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2" style="padding: 0 24px 24px;">
+					<p style="margin: 0; font-size: 18px;"><strong>[nazwa_pochodzenie]</strong></p>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<hr style="height: 1px; margin: 0; border-top: 1px dashed #c4c4c4; border-bottom: 0; border-left:0;border-right: 0;  padding: 0;"/>
+		<table style="border-collapse: collapse;">
+			<tbody>
+			<tr>
+				<td style="padding: 24px 24px 0;">
+					<h1 style="font-size: 1.4em; font-weight: 500; padding: 8px 0; margin: 0; line-height: 1.75em">
+						Cześć [imie],</h1>
+				</td>
+			</tr>
+			<tr>
+				<td style="padding: 0 24px;">
+					<p style="font-size: 1em; padding: 8px 0; margin: 0; line-height: 1.75em">Mamy świetne wieści! Twoje
+						zamówienie zostało właśnie odebrane przez kuriera i już do ciebie jedzie. Teraz wyczekuj na telefon lub wiadomość od kuriera!</p>
+					<p style="font-size: 1em; padding: 8px 0; margin: 0; line-height: 1.75em">Aby śledzić Twoją
+						przesyłkę, kliknij tutaj:
+						<a href="[przesylka_link_sledzenia]" style="text-decoration: underline; color: #000000; font-weight: 500;">[przesylka_nr_nadania]</a>.
+					</p>
+				</td>
+			</tr>
+
+			</tbody>
+		</table>
+		<img alt="" height="auto" src="https://bikepackride.pl/data/include/cms/bpr/wyslane.png" style="padding: 24px 0; width:100%">
+		<hr style="height: 1px; margin: 0; border-top: 1px dashed #c4c4c4; border-bottom: 0; border-left:0;border-right: 0;  padding: 0;"/>
+		<table style="border-collapse: collapse; margin: 24px 0; width: 100%;">
+			<tbody>
+			<tr>
+				<th style="padding-left: 24px; width: 65%; text-align: left;">
+					<p style="margin: 0; text-decoration: underline;">Nazwa
+					</p>
+				</th>
+				<th style="width: 5%; text-align: right;">
+					<p style="margin: 0; text-decoration: underline;">Ilość
+					</p>
+				</th>
+				<th style="padding-right: 24px; width: 30%; text-align: right;">
+					<p style="margin: 0; text-decoration: underline;">Wartość
+					</p>
+				</th>
+			</tr>
+			[lista_przedmiotow(<tr><td style="padding: 12px 24px; width: 65%; text-align: left;">[p_nazwa]</td><td style="width: 5%; padding: 12px 0 24px; text-align: right;">[p_ilosc]</td><td style="padding: 12px 24px 24px 0; width: 30%; text-align: right; font-weight: 500;">[p_cena][p_waluta]</td></tr>)]
+			<tr style="border-top: 1px dashed #c4c4c4">
+				<td colspan="2" style="text-align: right;padding: 24px 0 2px;">
+					Produkty
+				</td>
+				<td style="padding: 24px 24px 2px 2px; font-weight: 500; text-align: right;">
+					[laczna_cena_produktow] [waluta]
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2" style="text-align: right;padding: 2px 0;">
+					Dostawa
+				</td>
+				<td style="padding: 2px 24px 2px 2px; font-weight: 500; text-align: right;">
+					[przesylka_cena] [waluta]
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2" style="text-align: right;padding: 2px 0;">Łącznie</td>
+				<td style="padding: 2px 24px 2px 2px; font-weight: 500; text-align: right;">[laczna_cena] [waluta]</td>
+			</tr>
+			</tbody>
+		</table>
+		<hr style="height: 1px; margin: 0; border-top: 1px dashed #c4c4c4; border-bottom: 0; border-left:0;border-right: 0;  padding: 0;"/>
+		<table style="border-collapse: collapse;">
+			<tbody>
+			<tr>
+				<th style="padding: 24px 0 6px 24px; text-decoration: underline;">
+					Uwagi do zamówienia
+				</th>
+
+			</tr>
+			<tr>
+				<td style="padding: 6px 0 24px 24px;">
+					[uwagi_kupujacego]
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<hr style="height: 1px; margin: 0; border-top: 1px dashed #c4c4c4; border-bottom: 0; border-left:0;border-right: 0;  padding: 0;"/>
+		<table style="border-collapse: collapse;">
+			<tbody>
+			<tr>
+				<th style="padding: 24px 0 6px 24px; text-decoration: underline;">
+					Wybrana forma dostawy
+				</th>
+
+			</tr>
+			<tr>
+				<td style="padding: 6px 0 24px 24px;">
+					[przesylka_nazwa]
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<hr style="height: 1px; margin: 0; border-top: 1px dashed #c4c4c4; border-bottom: 0; border-left:0;border-right: 0;  padding: 0;"/>
+		<table style="border-collapse: collapse; width: 100%;">
+			<tbody>
+			<tr>
+				<th style="padding: 24px 6px 6px 24px; width: 50%; text-align: left; border-right: 1px dashed #c4c4c4; text-decoration: underline;">
+					Dane dostawy
+				</th>
+				<th style="padding: 24px 6px 6px 24px; width: 50%; text-align: left; text-decoration: underline;">
+					Dane faktury
+				</th>
+			</tr>
+			<tr>
+				<td style="padding: 6px 6px 24px 24px; width: 50%; text-align: left; border-right: 1px dashed #c4c4c4;">
+					<strong style="display: block;">[firma]</strong>
+					<strong style="display: block;">[imie_nazwisko]</strong>
+					<span style="display: block;">[adres]</span>
+					<span style="display: block;">[kod_pocztowy] [miasto]</span>
+					<span style="display: block;">[kraj]</span>
+					<span style="display: block;">[punkt_odbioru_id]</span>
+					<span style="display: block;">[punkt_odbioru_nazwa]</span>
+					<span style="display: block;">[punkt_odbioru_adres]</span>
+					<span style="display: block;">[punkt_odbioru_kod_pocztowy] [punkt_odbioru_miasto]</span>
+				</td>
+				<td style="padding: 6px 6px 24px 24px;; width: 50%; text-align: left; vertical-align: top;">
+					<strong style="display: block;">[faktura_firma]</strong>
+					<strong style="display: block;">[faktura_imie_nazwisko]</strong>
+					<span style="display: block;">[faktura_adres]</span>
+					<span style="display: block;">[faktura_kod_pocztowy] [faktura_miasto]</span>
+					<span style="display: block;">[faktura_kraj]</span>
+					<span style="display: block;">[faktura_nip]</span>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<hr style="height: 1px; margin: 0; border-top: 1px dashed #c4c4c4; border-bottom: 0; border-left:0;border-right: 0;  padding: 0;"/>
+		<table style="border-collapse: collapse;">
+			<tbody>
+			<tr>
+				<td style="padding:24px;">
+					<strong style="display: block; padding-bottom: 6px;">Alior Bank SA</strong>
+					<p style="display: block;padding-bottom: 12px;"><strong>Numer konta:</strong> PL93 2490 0005 0000
+						4500 3581 7215</p>
+					<p style="display: block">Jeżeli opłacasz zamówienie w tytule przelewu podaj numer zamówienia.</p>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<hr style="height: 1px; margin: 0; border-top: 1px dashed #c4c4c4; border-bottom: 0; border-left:0;border-right: 0;  padding: 0;"/>
+		<table style="border-collapse: collapse; margin: 24px;">
+			<tbody>
+			<tr>
+				<td style="padding: 24px 0;">
+					<p style="font-size: 1em; padding: 8px 0; margin: 0;line-height: 1.75em">Jeśli masz jakiekolwiek
+						pytania lub
+						potrzebujesz pomocy, nasz zespół wsparcia klienta jest zawsze gotowy, aby Ci pomóc. Pamiętaj, że
+						masz pełny dostęp do Twojego konta, gdzie możesz śledzić swoje zamówienia, zarządzać
+						preferencjami i odkrywać specjalne oferty.</p>
+					<strong>Zapraszamy na zakupy!</strong>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<table style="border-collapse: collapse; padding:24px 0; font-weight: 500; width: 100%; background-color: #d02c10; color: #ffffff;">
+			<tbody>
+			<tr>
+				<td style="width: 50%; text-align: center;padding: 16px 0;">✓ DOSKONAŁA JAKOŚĆ</td>
+				<td style="width: 50%; text-align: center;padding: 16px 0;">✓ SZYBKA DOSTAWA</td>
+			</tr>
+			</tbody>
+		</table>
+		<table style="border-collapse: collapse; padding:24px 0; font-weight: 500; width: 100%; background-color: #ff1e00; color: #ffffff;">
+			<tbody>
+			<tr>
+				<td style="text-align: center; width: 100%; padding: 24px 0;">
+					<a href="https://bikepackride.pl" style="display: block;" target="_blank"><img alt="Logo BIKEPACKRIDE"
+					                                                                  src="https://bikepackride.pl/data/include/cms/bpr/bikepackride-w-170x35.png"
+					                                                                  width="170px"></a>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<table style="border-collapse: collapse; padding:24px 0; font-weight: 500; width: 100%; background-color: #ff1e00; color: #ffffff;">
+			<tbody>
+			<tr>
+				<td style="text-align: center; width: 100%; ">
+					<p style="display: block;">Pozostań z nami w kontakcie!</p>
+					<a href="tel:+48572575078" style="display: block;text-decoration: none; color: #ffffff;">+48 572
+						575 078</a>
+					<a href="mailto:sklep@bikepackride.pl"
+					   style="display: block;text-decoration: none; color: #ffffff;">sklep@bikepackride.pl</a>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<table style="border-collapse: collapse; padding:24px 0; font-weight: 500; width: 100%; background-color: #ff1e00; color: #ffffff;">
+			<tbody>
+			<tr>
+				<td style="width: 50%; text-align: right;padding: 32px;"><a href="https://www.facebook.com/bikepackride" target="_blank"><img
+					alt="Facebook"
+					height="auto"
+					src="https://bikepackride.pl/data/include/cms/bpr/facebook.png" width="32px"></a></td>
+				<td style="width: 50%; text-align: left;padding: 32px;"><a href="https://www.instagram.com/bikepackride_pl" target="_blank"><img
+					alt="Facebook"
+					height="auto"
+					src="https://bikepackride.pl/data/include/cms/bpr/instagram.png" width="32px"></a></td>
+			</tr>
+			</tbody>
+		</table>
+		<table style="border-collapse: collapse; background-color: #c4c4c4;color: #707070; width: 100%;">
+			<tbody>
+			<tr>
+				<td style="padding: 24px;font-size: 0.8em; width: 100%;">
+					<p style="font-size: 1em;">Copyright ©BikePackRide</p>
+					<p>Zastrzegamy sobie prawo do błędów typograficznych, zmian cen,
+						opóźnień w dostawach i wyprzedanych towarów.</p>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+	</div>
+</div>

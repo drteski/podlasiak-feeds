@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import getXmlData from '../services/createProducts.service.js';
+import getXmlData from '../OLD-BP/createProducts.service.js';
 import config from '../config/config.js';
 
 dotenv.config({ path: '../.env' });

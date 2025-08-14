@@ -51,9 +51,7 @@ const connection = async () => {
 						],
 						product_category: 'Bathroom Sinks',
 						description: 'A Shoe Test',
-						image_url_arr: [
-							'https://www.therange.co.uk/example1.jpg',
-						],
+						image_url_arr: ['https://www.therange.co.uk/example1.jpg'],
 						fulfilment_class: 'Small',
 						active: 1,
 						visible: 1,
@@ -67,3 +65,5 @@ const connection = async () => {
 		)
 		.then((res) => console.log(res.data));
 };
+
+rangeAuth().then(connection);
