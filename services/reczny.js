@@ -1,29 +1,25 @@
 import { connectToGoogleSheets, getDataFromSheets } from '../utilities/googleSheets.js';
 import { tariffConfig } from '../config/config.js';
 import dotenv, { config } from 'dotenv';
-import mongoose, { connect } from 'mongoose';
+import mongoose from 'mongoose';
 import { runFeedGenerator } from './products/services/runFeedGenerator.js';
 import { numberToLetters } from './products/utils/numbersToLetters.js';
 import axios from 'axios';
 import { chunker } from './products/utils/chunker.js';
+import fs from 'fs';
+const { mkdir } = fs.promises;
+import { format } from 'date-fns';
+import ObjectsToCsv from 'objects-to-csv-file';
 
 dotenv.config({ path: '../.env' });
 const { DATABASE_URL } = process.env;
 
 mongoose.set('strictQuery', true);
-await mongoose.connect(
-	DATABASE_URL,
-	{
-		useNewUrlParser: true,
-		useUnifiedTopology: true,
-		serverSelectionTimeoutMS: 10000,
-	},
-	(error) => {
-		if (error) {
-			console.log(error);
-		}
+await mongoose.connect(DATABASE_URL, { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 10000 }, (error) => {
+	if (error) {
+		console.log(error);
 	}
-);
+});
 
 mongoose.connection.on('connection', () => console.log('Połączono z DB'));
 mongoose.connection.on('error', (err) => console.log(err));
@@ -44,22 +40,13 @@ const groupProducts = (items) => {
 		}
 	}
 	for (const [id, variants] of Object.entries(variantsMap)) {
-		result.push({
-			id: Number(id),
-			variants,
-			count: variants.length,
-		});
+		result.push({ id: Number(id), variants, count: variants.length });
 	}
 	return result;
 };
 
 const categories = await connectToGoogleSheets('1RCpgsPbXC90GTcKpb5EoXA8jJZXKs2qreyFyyW-3b2k').then((document) =>
-	getDataFromSheets(document, 'MAPOWANIE').then((data) =>
-		data.map((item) => ({
-			uid: parseInt(item.uid),
-			category: item.category,
-		}))
-	)
+	getDataFromSheets(document, 'MAPOWANIE').then((data) => data.map((item) => ({ uid: parseInt(item.uid), category: item.category })))
 );
 
 const muTable = await connectToGoogleSheets('1RCpgsPbXC90GTcKpb5EoXA8jJZXKs2qreyFyyW-3b2k').then((document) => getDataFromSheets(document, 'MU').then((data) => data));
@@ -104,16 +91,7 @@ const pushCategroiesMapping = async (products) => {
 	const data = products.map((product) => {
 		const { uid, id, variantId, sku, weight, title, variantName } = product;
 		const sheetCategory = categories.find((category) => category.uid === uid);
-		return {
-			uid,
-			id,
-			variantId,
-			sku,
-			weight,
-			title: title['pl'],
-			variantName: variantName['pl'],
-			category: sheetCategory?.category === undefined ? '' : sheetCategory.category,
-		};
+		return { uid, id, variantId, sku, weight, title: title['pl'], variantName: variantName['pl'], category: sheetCategory?.category === undefined ? '' : sheetCategory.category };
 	});
 	await connectToGoogleSheets('1RCpgsPbXC90GTcKpb5EoXA8jJZXKs2qreyFyyW-3b2k').then(async (document) => {
 		const sheet = await document.sheetsByTitle['MAPOWANIE'];
@@ -298,6 +276,11 @@ const calculatePrice = (price, lang, category) => {
 	const mu = getMu[0] !== undefined ? parseFloat(getMu[1].replace(',', '.')) : null;
 	const cargo = getCargo[0] !== undefined ? parseFloat(getCargo[1].replace(',', '.')) : null;
 
+	if (currency < 1) {
+		if (lang === 'cz' || lang === 'sk') return parseFloat((Math.round(((price / (100 - mu)) * (1 + cargo / 100) * currency).toFixed(2) / factor) * factor).toFixed(2));
+		return parseFloat((Math.round(((price / ((100 - mu) / 100) + cargo) * currency).toFixed(2) / factor) * factor).toFixed(2));
+	}
+
 	if (lang === 'cz' || lang === 'sk') return parseFloat((Math.round((((price / (100 - mu)) * (1 + cargo / 100)) / currency).toFixed(2) / factor) * factor).toFixed(2));
 	return parseFloat((Math.round(((price / ((100 - mu) / 100) + cargo) / currency).toFixed(2) / factor) * factor).toFixed(2));
 };
@@ -362,20 +345,8 @@ const preparePrices = (products, prices) => {
 					.forEach((product) => {
 						const grossPrice = calculatePrice(base, lang.toLowerCase(), category);
 						if (product.variantId === '')
-							return productsToChange.push({
-								tariffId: tariffBase.tariff,
-								itemId: parseInt(product.id),
-								grossPrice,
-								tax: tariffBase.tax,
-								currency: tariffBase.currency,
-							});
-						return variantsToChange.push({
-							tariffId: tariffBase.tariff,
-							itemId: parseInt(product.variantId),
-							grossPrice: '',
-							tax: tariffBase.tax,
-							currency: tariffBase.currency,
-						});
+							return productsToChange.push({ tariffId: tariffBase.tariff, itemId: parseInt(product.id), grossPrice, tax: tariffBase.tax, currency: tariffBase.currency });
+						return variantsToChange.push({ tariffId: tariffBase.tariff, itemId: parseInt(product.variantId), grossPrice: '', tax: tariffBase.tax, currency: tariffBase.currency });
 					});
 			}
 			if (sell > 0) {
@@ -384,20 +355,8 @@ const preparePrices = (products, prices) => {
 					.forEach((product) => {
 						const grossPrice = calculatePrice(sell, lang.toLowerCase(), category);
 						if (product.variantId === '')
-							return productsToChange.push({
-								tariffId: tariffSell.tariff,
-								itemId: parseInt(product.id),
-								grossPrice,
-								tax: tariffSell.tax,
-								currency: tariffSell.currency,
-							});
-						return variantsToChange.push({
-							tariffId: tariffSell.tariff,
-							itemId: parseInt(product.variantId),
-							grossPrice: '',
-							tax: tariffSell.tax,
-							currency: tariffSell.currency,
-						});
+							return productsToChange.push({ tariffId: tariffSell.tariff, itemId: parseInt(product.id), grossPrice, tax: tariffSell.tax, currency: tariffSell.currency });
+						return variantsToChange.push({ tariffId: tariffSell.tariff, itemId: parseInt(product.variantId), grossPrice: '', tax: tariffSell.tax, currency: tariffSell.currency });
 					});
 			}
 			if (base === 0) {
@@ -405,20 +364,8 @@ const preparePrices = (products, prices) => {
 					.filter((product) => parseInt(product.id) === id)
 					.forEach((product) => {
 						if (product.variantId === '')
-							return productsToChange.push({
-								tariffId: tariffBase.tariff,
-								itemId: parseInt(product.id),
-								grossPrice: '',
-								tax: tariffBase.tax,
-								currency: tariffBase.currency,
-							});
-						return variantsToChange.push({
-							tariffId: tariffBase.tariff,
-							itemId: parseInt(product.variantId),
-							grossPrice: '',
-							tax: tariffBase.tax,
-							currency: tariffBase.currency,
-						});
+							return productsToChange.push({ tariffId: tariffBase.tariff, itemId: parseInt(product.id), grossPrice: '', tax: tariffBase.tax, currency: tariffBase.currency });
+						return variantsToChange.push({ tariffId: tariffBase.tariff, itemId: parseInt(product.variantId), grossPrice: '', tax: tariffBase.tax, currency: tariffBase.currency });
 					});
 			}
 			if (sell === 0) {
@@ -426,20 +373,8 @@ const preparePrices = (products, prices) => {
 					.filter((product) => parseInt(product.id) === id)
 					.forEach((product) => {
 						if (product.variantId === '')
-							return productsToChange.push({
-								tariffId: tariffSell.tariff,
-								itemId: parseInt(product.id),
-								grossPrice: '',
-								tax: tariffSell.tax,
-								currency: tariffSell.currency,
-							});
-						return variantsToChange.push({
-							tariffId: tariffSell.tariff,
-							itemId: parseInt(product.variantId),
-							grossPrice: '',
-							tax: tariffSell.tax,
-							currency: tariffSell.currency,
-						});
+							return productsToChange.push({ tariffId: tariffSell.tariff, itemId: parseInt(product.id), grossPrice: '', tax: tariffSell.tax, currency: tariffSell.currency });
+						return variantsToChange.push({ tariffId: tariffSell.tariff, itemId: parseInt(product.variantId), grossPrice: '', tax: tariffSell.tax, currency: tariffSell.currency });
 					});
 			}
 		} else {
@@ -590,26 +525,10 @@ const preparePrices = (products, prices) => {
 
 			preparedBaseVariants
 				.filter((item) => item.changedPrice)
-				.forEach((item) =>
-					variantsToChange.push({
-						tariffId: item.tariffId,
-						itemId: item.variantId,
-						grossPrice: item.price,
-						tax: item.tax,
-						currency: item.currency,
-					})
-				);
+				.forEach((item) => variantsToChange.push({ tariffId: item.tariffId, itemId: item.variantId, grossPrice: item.price, tax: item.tax, currency: item.currency }));
 			preparedSellVariants
 				.filter((item) => item.changedPrice)
-				.forEach((item) =>
-					variantsToChange.push({
-						tariffId: item.tariffId,
-						itemId: item.variantId,
-						grossPrice: item.price,
-						tax: item.tax,
-						currency: item.currency,
-					})
-				);
+				.forEach((item) => variantsToChange.push({ tariffId: item.tariffId, itemId: item.variantId, grossPrice: item.price, tax: item.tax, currency: item.currency }));
 		}
 	});
 
@@ -658,7 +577,12 @@ const collectAllChanges = async () => {
 		if (change.lang === 'WSZYSTKIE') {
 			const langs = [...new Set(tariffConfig.map((conf) => conf.code))];
 
-			const allForAll = Object.fromEntries(langs.map((lang) => [lang, preparePrices(products, { lang, data: change.data })]));
+			const allForAll = langs
+				.map((lang) => preparePrices(products, { lang, data: change.data }))
+				.reduce((acc, curr) => {
+					const [key, value] = Object.entries(curr)[0];
+					return { ...acc, [key]: value };
+				}, {});
 
 			result.Wszystkie = { ...(result.Wszystkie || {}), ...allForAll };
 		} else {
@@ -668,7 +592,75 @@ const collectAllChanges = async () => {
 	return result;
 };
 
-await collectAllChanges();
+const data = await collectAllChanges();
+
+const saveDataToFiles = (data) => {
+	return new Promise((resolve, reject) => {
+		(async () => {
+			try {
+				const date = format(new Date(), 'dd-MM-yyyy');
+				const time = format(new Date(), 'HH-mm');
+
+				const base = `../generate/updatePrices/${date}/${time}`;
+				await mkdir(base, { recursive: true });
+
+				const allWrites = []; // zbieramy promisy toDisk
+
+				for (const [key, value] of Object.entries(data)) {
+					const countryRoot = `${base}/${key}`;
+					await mkdir(countryRoot, { recursive: true });
+
+					if (key === 'Wszystkie') {
+						for (const [allKey, allValue] of Object.entries(value)) {
+							const { splitedVariant = [], splitedProduct = [] } = allValue;
+							const allCountryDir = `${countryRoot}/${allKey}`;
+							await mkdir(allCountryDir, { recursive: true });
+
+							// VARIANTY
+							splitedVariant.forEach((chunk, index) => {
+								const rows = Array.isArray(chunk) ? chunk : [chunk];
+								const csv = new ObjectsToCsv(rows);
+								allWrites.push(csv.toDisk(`${allCountryDir}/${index + 1}_variant_${allKey.toLowerCase()}_${time}.csv`, { delimiter: ';' }));
+							});
+
+							// PRODUKTY
+							splitedProduct.forEach((chunk, index) => {
+								const rows = Array.isArray(chunk) ? chunk : [chunk];
+								const csv = new ObjectsToCsv(rows);
+								allWrites.push(csv.toDisk(`${allCountryDir}/${index + 1}_product_${allKey.toLowerCase()}_${time}.csv`, { delimiter: ';' }));
+							});
+						}
+						continue; // ważne: nie wchodzimy w sekcję niżej
+					}
+
+					// GAŁĘZIE pojedynczych krajów (poza "Wszystkie")
+					const { splitedVariant = [], splitedProduct = [] } = value;
+
+					// VARIANTY
+					splitedVariant.forEach((chunk, index) => {
+						const rows = Array.isArray(chunk) ? chunk : [chunk];
+						const csv = new ObjectsToCsv(rows);
+						allWrites.push(csv.toDisk(`${countryRoot}/${index + 1}_variant_${key.toLowerCase()}_${time}.csv`, { delimiter: ';' }));
+					});
+
+					// PRODUKTY
+					splitedProduct.forEach((chunk, index) => {
+						const rows = Array.isArray(chunk) ? chunk : [chunk];
+						const csv = new ObjectsToCsv(rows);
+						allWrites.push(csv.toDisk(`${countryRoot}/${index + 1}_product_${key.toLowerCase()}_${time}.csv`, { delimiter: ';' }));
+					});
+				}
+
+				await Promise.all(allWrites);
+				resolve('Zapisano');
+			} catch (err) {
+				reject(err);
+			}
+		})();
+	});
+};
+
+await saveDataToFiles(data);
 
 // console.log(preparePrices(products, pr[3]));
 // await pushNBPCurrencies();

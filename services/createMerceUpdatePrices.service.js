@@ -47,21 +47,9 @@ const convertToImportData = (data) => {
 					const config = tariffConfig.filter((item) => item.tariff === tariffId);
 
 					if (priceType === 'product') {
-						pricesProduct.push({
-							tariffId,
-							itemId: id,
-							grossPrice: value,
-							tax: parseFloat(config[0].tax),
-							currency: config[0].currency,
-						});
+						pricesProduct.push({ tariffId, itemId: id, grossPrice: value, tax: parseFloat(config[0].tax), currency: config[0].currency });
 					} else {
-						pricesVariant.push({
-							tariffId,
-							itemId: variantId,
-							grossPrice: value,
-							tax: parseFloat(config[0].tax),
-							currency: config[0].currency,
-						});
+						pricesVariant.push({ tariffId, itemId: variantId, grossPrice: value, tax: parseFloat(config[0].tax), currency: config[0].currency });
 					}
 				}
 			}
@@ -69,18 +57,12 @@ const convertToImportData = (data) => {
 		const variant = flatten(pricesVariant)
 			.filter((item) => item.grossPrice !== '')
 			.map((prod) => {
-				return {
-					...prod,
-					grossPrice: prod.grossPrice === '0' ? '' : parseFloat(prod.grossPrice.replace(',', '.')),
-				};
+				return { ...prod, grossPrice: prod.grossPrice === '0' ? '' : parseFloat(prod.grossPrice.replace(',', '.')) };
 			});
 		const product = flatten(pricesProduct)
 			.filter((item) => item.grossPrice !== '')
 			.map((prod) => {
-				return {
-					...prod,
-					grossPrice: prod.grossPrice === '0' ? '' : parseFloat(prod.grossPrice.replace(',', '.')),
-				};
+				return { ...prod, grossPrice: prod.grossPrice === '0' ? '' : parseFloat(prod.grossPrice.replace(',', '.')) };
 			});
 		resolve({ variant, product });
 	});
@@ -134,9 +116,7 @@ const saveDataToFiles = (data) => {
 				const productChunk = new ObjectsToCsv(chunk);
 				await productChunk.toDisk(
 					`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}/${index + 1}_variant_${key.toLowerCase()}_${format(new Date(), 'dd-MM-yyyy_HH-mm-ss')}.csv`,
-					{
-						delimiter: ';',
-					}
+					{ delimiter: ';' }
 				);
 			});
 		});
@@ -146,9 +126,7 @@ const saveDataToFiles = (data) => {
 				const productChunk = new ObjectsToCsv(chunk);
 				await productChunk.toDisk(
 					`../generate/updatePrices/${format(new Date(), 'dd-MM-yyyy')}/${key}/${index + 1}_product_${key.toLowerCase()}_${format(new Date(), 'dd-MM-yyyy_HH-mm-ss')}.csv`,
-					{
-						delimiter: ';',
-					}
+					{ delimiter: ';' }
 				);
 			});
 		});

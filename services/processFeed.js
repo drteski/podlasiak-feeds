@@ -11,7 +11,7 @@ import path from 'path';
 // import mongoose from 'mongoose';
 import { getSubiektProducts } from './feed/subiekt/subiektFeed.js';
 
-const subiektProducts = await getSubiektProducts();
+// const subiektProducts = await getSubiektProducts();
 
 dotenv.config({ path: '../.env' });
 // mongoose.set('strictQuery', true);
@@ -120,13 +120,7 @@ export const excludedFilter = (products, options) => {
 export const xmlBuilider = async (data, cb) => {
 	const { products, language } = data;
 	const root = builder;
-	return {
-		products: cb(products, root).end({
-			format: 'xml',
-			prettyPrint: true,
-		}),
-		language,
-	};
+	return { products: cb(products, root).end({ format: 'xml', prettyPrint: true }), language };
 };
 
 export const getStoreUrl = (lang, alias) => {
@@ -147,9 +141,7 @@ export const saveFeedFileToDisk = async (data, name, format, location, delimiter
 			}
 			if (format === 'csv') {
 				const csv = new ObjectsToCsv(products);
-				await csv.toDisk(`${location}${name}_${language}.${format}`, {
-					delimiter,
-				});
+				await csv.toDisk(`${location}${name}_${language}.${format}`, { delimiter });
 			}
 			if (format === 'json') {
 				await fs.writeFile(`${location}${name}_${language}.${format}`, JSON.stringify(products), 'utf8', (error) => {
@@ -162,9 +154,7 @@ export const saveFeedFileToDisk = async (data, name, format, location, delimiter
 			if (format === 'csv') {
 				for await (const [index, chunk] of products.entries()) {
 					const csv = new ObjectsToCsv(chunk);
-					await csv.toDisk(`${location}${name}_${language}_${index + 1}.${format}`, {
-						delimiter,
-					});
+					await csv.toDisk(`${location}${name}_${language}_${index + 1}.${format}`, { delimiter });
 				}
 			}
 		}
@@ -361,36 +351,21 @@ export const uploadFeeds = async (localFiles, bar) => {
 		};
 		const size = await dirSize(localFiles);
 		const sizeInMB = Math.floor(parseFloat(size) / 1000000);
-		bar.start(sizeInMB, 0, {
-			dane: 'Przesyłanie do FTP',
-			additionalData: '',
-		});
+		bar.start(sizeInMB, 0, { dane: 'Przesyłanie do FTP', additionalData: '' });
 
 		client.trackProgress((info) => {
 			const currentProgress = Math.floor(parseFloat(info.bytesOverall) / 1000000);
-			bar.update(currentProgress, {
-				dane: 'Przesyłanie do FTP',
-				additionalData: ` ${currentProgress}/${sizeInMB} Mb •`,
-			});
+			bar.update(currentProgress, { dane: 'Przesyłanie do FTP', additionalData: ` ${currentProgress}/${sizeInMB} Mb •` });
 		});
 
-		await client.access({
-			host: FTP_HOST,
-			port: FTP_PORT,
-			user: FTP_USER,
-			password: FTP_PASS,
-			secure: false,
-		});
+		await client.access({ host: FTP_HOST, port: FTP_PORT, user: FTP_USER, password: FTP_PASS, secure: false });
 		await client.uploadFromDir(localFiles, FTP_LOCATION).catch((error) => {
 			return uploadFeeds(localFiles, bar);
 		});
 		await client.uploadFromDir(localFiles, FTP_LOCATION + 'feeds').catch((error) => {
 			return uploadFeeds(localFiles, bar);
 		});
-		bar.update(0, {
-			dane: 'Przesłano do FTP',
-			additionalData: ``,
-		});
+		bar.update(0, { dane: 'Przesłano do FTP', additionalData: `` });
 		client.close();
 
 		resolve();

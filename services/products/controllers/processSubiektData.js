@@ -1,21 +1,18 @@
 import sql from 'mssql';
 import { subiektIncludedGroups } from '../../../config/config.js';
+import dotenv from 'dotenv';
+dotenv.config({ path: '../.env' });
+
+const { SUBIEKT_USER, SUBIEKT_PASSWORD, SUBIEKT_DB, SUBIEKT_SERVER, SUBIEKT_PORT } = process.env;
 
 const sqlConfig = {
-	user: 'sa',
-	password: '',
-	database: 'PODLASIAK',
-	server: `192.168.1.2\\insertsql`,
-	pool: {
-		max: 10,
-		min: 0,
-		idleTimeoutMillis: 30000,
-	},
-	options: {
-		encrypt: true,
-		trustServerCertificate: true,
-		requestTimeout: 360000,
-	},
+	user: SUBIEKT_USER,
+	password: SUBIEKT_PASSWORD,
+	database: SUBIEKT_DB,
+	server: SUBIEKT_SERVER,
+	port: SUBIEKT_PORT,
+	pool: { max: 10, min: 0, idleTimeoutMillis: 30000 },
+	options: { encrypt: true, trustServerCertificate: true, requestTimeout: 360000 },
 };
 
 const getSubiektData = async () => {
@@ -134,10 +131,7 @@ export const processSubiektData = async () => {
 			const mags = data.mag
 				.map((mag) => {
 					if (mag.mag_Nazwa === 'CH Fasty' || mag.mag_Nazwa === 'EDI' || mag.mag_Nazwa === 'Galeria Topaz') return;
-					return {
-						id: mag.mag_Id,
-						name: mag.mag_Nazwa,
-					};
+					return { id: mag.mag_Id, name: mag.mag_Nazwa };
 				})
 				.filter(Boolean);
 			const stock = data.stock
@@ -158,12 +152,7 @@ export const processSubiektData = async () => {
 					if (previousIndex === -1) {
 						return [
 							...previousValue,
-							{
-								productId: currentValue.productId,
-								totalStock: currentValue.totalStock,
-								onHoldStock: currentValue.onHoldStock,
-								availableStock: currentValue.availableStock,
-							},
+							{ productId: currentValue.productId, totalStock: currentValue.totalStock, onHoldStock: currentValue.onHoldStock, availableStock: currentValue.availableStock },
 						];
 					} else {
 						previousValue[previousIndex].totalStock = previousValue[previousIndex].totalStock + currentValue.totalStock;
@@ -175,11 +164,7 @@ export const processSubiektData = async () => {
 				}, []);
 
 			const prices = data.prices.map((price) => {
-				return {
-					productId: price.tc_IdTowar,
-					nett: price.tc_CenaNetto1,
-					gross: price.tc_CenaBrutto1,
-				};
+				return { productId: price.tc_IdTowar, nett: price.tc_CenaNetto1, gross: price.tc_CenaBrutto1 };
 			});
 			const b2b = data.features.filter((cecha) => parseInt(cecha.cht_IdCecha) === 42);
 
